@@ -31,24 +31,15 @@ Android / iOS どちらもブラウザから「ホーム画面に追加」する
 2. **Authentication** →「始める」→ ログイン方法で **メール / パスワード** を有効化
 3. **Firestore Database** →「データベースを作成」→ ロケーションは `asia-northeast1`（東京）、本番環境モードで作成
 4. Firestore の **ルール** タブに、このリポジトリの [`firestore.rules`](firestore.rules) の内容を貼り付けて「公開」
-5. プロジェクトの設定 →「マイアプリ」→ ウェブアプリ（`</>`）を追加し、表示される `apiKey` / `authDomain` / `projectId` / `appId` を控える
+5. プロジェクトの設定 →「マイアプリ」→ ウェブアプリ（`</>`）を追加し、表示される `apiKey` / `authDomain` / `projectId` / `appId` を `src/firebase.ts` に書く
 
 ### 2. GitHub Pages で公開する
 
 1. GitHub のリポジトリで **Settings → Pages → Source** を **GitHub Actions** にする
-2. **Settings → Secrets and variables → Actions → Variables** に以下を登録
+2. `main` ブランチに push すると自動でビルド・公開されます（Actions タブから手動実行も可）
+3. Firebase コンソール → Authentication → 設定 → **承認済みドメイン** に `<ユーザー名>.github.io` を追加
 
-   | 名前 | 値 |
-   | --- | --- |
-   | `VITE_FIREBASE_API_KEY` | apiKey |
-   | `VITE_FIREBASE_AUTH_DOMAIN` | authDomain |
-   | `VITE_FIREBASE_PROJECT_ID` | projectId |
-   | `VITE_FIREBASE_APP_ID` | appId |
-
-3. `main` ブランチに push すると自動でビルド・公開されます（Actions タブから手動実行も可）
-4. Firebase コンソール → Authentication → 設定 → **承認済みドメイン** に `<ユーザー名>.github.io` を追加
-
-> Firebase のウェブ用設定値は公開されても問題ない値です。データはセキュリティルールで2人以外から保護されます。
+> Firebase のウェブ用設定値は `src/firebase.ts` に直接書いています。公開されても問題ない値で、データはセキュリティルールで2人以外から保護されます。
 
 ### 3. スマホに入れる
 
@@ -61,11 +52,10 @@ Android / iOS どちらもブラウザから「ホーム画面に追加」する
 
 ```bash
 npm install
-cp .env.example .env.local   # Firebase の値を記入
 npm run dev
 ```
 
-Firebase エミュレータで動かす場合は `.env.local` に `VITE_USE_EMULATOR=true` を追加し、
+Firebase エミュレータで動かす場合は `.env.example` を `.env.local` にコピーして値を埋め、`VITE_USE_EMULATOR=true` を追加したうえで
 `npx firebase-tools emulators:start --only auth,firestore --project demo-bucket` を起動してください
 （このときの `VITE_FIREBASE_*` の値は適当な文字列で構いません）。
 
