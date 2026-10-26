@@ -98,6 +98,7 @@ export async function deleteItem(spaceId: string, item: Item) {
 
 export interface CompletionInput {
   doneAt: Date
+  doneBy: string
   doneMemo: string
   rating: number
   /** 残す既存写真の id */
@@ -122,6 +123,8 @@ export async function saveCompletion(spaceId: string, item: Item, input: Complet
   batch.update(doc(itemsCol(spaceId), item.id), {
     done: true,
     doneAt: Timestamp.fromDate(input.doneAt),
+    // 思い出を書き足すだけのときは、最初にかなえた人を残す
+    doneBy: item.done ? (item.doneBy ?? input.doneBy) : input.doneBy,
     doneMemo: input.doneMemo,
     rating: input.rating,
     photoIds: [...input.keepPhotoIds, ...newIds],
@@ -132,8 +135,8 @@ export async function saveCompletion(spaceId: string, item: Item, input: Complet
 }
 
 /** 行の丸をタップしたとき。日時だけ記録し、写真やことばはあとから足せる */
-export async function markDone(spaceId: string, itemId: string) {
-  await updateDoc(doc(itemsCol(spaceId), itemId), { done: true, doneAt: Timestamp.now(), updatedAt: serverTimestamp() })
+export async function markDone(spaceId: string, itemId: string, uid: string) {
+  await updateDoc(doc(itemsCol(spaceId), itemId), { done: true, doneAt: Timestamp.now(), doneBy: uid, updatedAt: serverTimestamp() })
 }
 
 export async function undoCompletion(spaceId: string, itemId: string) {

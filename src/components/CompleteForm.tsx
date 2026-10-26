@@ -6,7 +6,7 @@ import { Dots, Sheet, toLocalInput } from './ui'
 
 const MAX_PHOTOS = 10
 
-export function CompleteForm({ spaceId, item, onClose }: { spaceId: string; item: Item; onClose: (saved: boolean) => void }) {
+export function CompleteForm({ spaceId, uid, item, onClose }: { spaceId: string; uid: string; item: Item; onClose: (saved: boolean) => void }) {
   const [doneAt, setDoneAt] = useState(toLocalInput(item.doneAt?.toDate() ?? new Date()))
   const [doneMemo, setDoneMemo] = useState(item.doneMemo)
   const [rating, setRating] = useState(item.rating)
@@ -50,6 +50,7 @@ export function CompleteForm({ spaceId, item, onClose }: { spaceId: string; item
     const thumb = first ? await squareThumb(first, 240) : null
     const pending = saveCompletion(spaceId, item, {
       doneAt: new Date(doneAt),
+      doneBy: uid,
       doneMemo: doneMemo.trim(),
       rating,
       keepPhotoIds: existing.map((p) => p.id),

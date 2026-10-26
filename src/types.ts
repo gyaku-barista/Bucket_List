@@ -38,6 +38,8 @@ export interface Item {
   updatedAt: Timestamp | null
   done: boolean
   doneAt: Timestamp | null
+  /** かなえた人（古いデータには無いので、そのときは書いた人とみなす） */
+  doneBy?: string
   doneMemo: string
   rating: number
   photoIds: string[]

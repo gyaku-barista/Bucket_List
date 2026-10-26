@@ -4,17 +4,17 @@ import { auth } from '../firebase'
 import { updateCategories, updateProfile } from '../data'
 import { squareThumb } from '../image'
 import type { Item, Member, Space } from '../types'
-import { Avatar, inkOf, Sheet } from './ui'
+import { Avatar, inkOf } from './ui'
 
 interface Props {
   space: Space
   uid: string
   members: Member[]
   items: Item[]
-  onClose: () => void
 }
 
-export function Settings({ space, uid, members, items, onClose }: Props) {
+/** 下のナビゲーションから開く設定の画面 */
+export function Settings({ space, uid, members, items }: Props) {
   const me = members.find((m) => m.uid === uid)
   const partner = members.find((m) => m.uid !== uid)
   const [name, setName] = useState(me?.displayName ?? '')
@@ -65,89 +65,87 @@ export function Settings({ space, uid, members, items, onClose }: Props) {
   }
 
   return (
-    <Sheet title="設定" onClose={onClose}>
-      <div className="settings">
-        <section>
-          <h3 className="field-label">あなた</h3>
-          <div className="profile">
-            <Avatar member={me} size={56} />
-            <label className="grow">
-              <span className="field-label">名前</span>
-              <input className={inkOf(uid, space.members)} value={name} onChange={(e) => setName(e.target.value)} onBlur={saveName} maxLength={20} />
-            </label>
-          </div>
-          <div className="form-actions">
-            <label className="btn">
-              写真を選ぶ
-              <input type="file" accept="image/*" hidden onChange={(e) => changeAvatar(e.target.files?.[0])} />
-            </label>
-            {me?.avatar && (
-              <button className="btn ghost" onClick={() => updateProfile(space.id, uid, { avatar: null })}>
-                写真をはずす
-              </button>
-            )}
-          </div>
-          <p className="note">
-            あなたの書いた文字は{inkOf(uid, space.members) === 'ink-a' ? '紺' : 'セピア'}のインクで残ります。
-          </p>
-        </section>
-
-        <section>
-          <h3 className="field-label">相手</h3>
-          {partner ? (
-            <p className="profile">
-              <Avatar member={partner} size={40} />
-              <span className={'partner-name ' + inkOf(partner.uid, space.members)}>{partner.displayName}</span>
-            </p>
-          ) : (
-            <>
-              <p className="note">この招待コードを相手に送って、はじめの画面で書いてもらってください。</p>
-              <p className="invite-code">{space.inviteCode}</p>
-              <div className="form-actions">
-                <button className="btn primary" onClick={share}>
-                  招待を送る
-                </button>
-              </div>
-            </>
-          )}
-        </section>
-
-        <section>
-          <h3 className="field-label">分類</h3>
-          <ul className="category-list">
-            {space.categories.map((c, i) => (
-              <li key={c.id}>
-                <span className="grow">{c.name}</span>
-                <button className="btn ghost" onClick={() => moveCategory(i, -1)} disabled={i === 0}>
-                  上へ
-                </button>
-                <button className="btn ghost" onClick={() => moveCategory(i, 1)} disabled={i === space.categories.length - 1}>
-                  下へ
-                </button>
-                <button className="btn ghost" onClick={() => removeCategory(c.id)}>
-                  消す
-                </button>
-              </li>
-            ))}
-          </ul>
-          <form
-            className="add-category"
-            onSubmit={(e) => {
-              e.preventDefault()
-              addCategory()
-            }}
-          >
-            <input className="grow" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="新しい分類" maxLength={20} />
-            <button className="btn">足す</button>
-          </form>
-        </section>
-
-        <div className="form-actions">
-          <button className="btn ghost" onClick={() => signOut(auth)}>
-            ログアウト
-          </button>
+    <section className="settings">
+      <section>
+        <h3 className="field-label">あなた</h3>
+        <div className="profile">
+          <Avatar member={me} size={56} />
+          <label className="grow">
+            <span className="field-label">名前</span>
+            <input className={inkOf(uid, space.members)} value={name} onChange={(e) => setName(e.target.value)} onBlur={saveName} maxLength={20} />
+          </label>
         </div>
+        <div className="form-actions">
+          <label className="btn">
+            写真を選ぶ
+            <input type="file" accept="image/*" hidden onChange={(e) => changeAvatar(e.target.files?.[0])} />
+          </label>
+          {me?.avatar && (
+            <button className="btn ghost" onClick={() => updateProfile(space.id, uid, { avatar: null })}>
+              写真をはずす
+            </button>
+          )}
+        </div>
+        <p className="note">
+          あなたの書いた文字は{inkOf(uid, space.members) === 'ink-a' ? '紺' : 'セピア'}のインクで残ります。
+        </p>
+      </section>
+
+      <section>
+        <h3 className="field-label">相手</h3>
+        {partner ? (
+          <p className="profile">
+            <Avatar member={partner} size={40} />
+            <span className={'partner-name ' + inkOf(partner.uid, space.members)}>{partner.displayName}</span>
+          </p>
+        ) : (
+          <>
+            <p className="note">この招待コードを相手に送って、はじめの画面で書いてもらってください。</p>
+            <p className="invite-code">{space.inviteCode}</p>
+            <div className="form-actions">
+              <button className="btn primary" onClick={share}>
+                招待を送る
+              </button>
+            </div>
+          </>
+        )}
+      </section>
+
+      <section>
+        <h3 className="field-label">分類</h3>
+        <ul className="category-list">
+          {space.categories.map((c, i) => (
+            <li key={c.id}>
+              <span className="grow">{c.name}</span>
+              <button className="btn ghost" onClick={() => moveCategory(i, -1)} disabled={i === 0}>
+                上へ
+              </button>
+              <button className="btn ghost" onClick={() => moveCategory(i, 1)} disabled={i === space.categories.length - 1}>
+                下へ
+              </button>
+              <button className="btn ghost" onClick={() => removeCategory(c.id)}>
+                消す
+              </button>
+            </li>
+          ))}
+        </ul>
+        <form
+          className="add-category"
+          onSubmit={(e) => {
+            e.preventDefault()
+            addCategory()
+          }}
+        >
+          <input className="grow" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="新しい分類" maxLength={20} />
+          <button className="btn">足す</button>
+        </form>
+      </section>
+
+      <div className="form-actions">
+        <button className="btn ghost" onClick={() => signOut(auth)}>
+          ログアウト
+        </button>
       </div>
-    </Sheet>
+    </section>
   )
 }

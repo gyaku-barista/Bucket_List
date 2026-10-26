@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import { addItem, markDone } from '../data'
-import { findCategory } from '../categories'
+import { findCategory, paleOf } from '../categories'
 import { useSpace } from '../hooks'
 import type { Item } from '../types'
 import { CompleteForm } from './CompleteForm'
 import { ItemDetail } from './ItemDetail'
 import { ItemForm } from './ItemForm'
 import { Settings } from './Settings'
-import { Chips, Icon, inkOf, Segmented, Sheet as SheetFrame, shortDate } from './ui'
+import { CoupleArt } from './illustrations'
+import { Memories } from './Memories'
+import { Avatar, Chips, Icon, inkOf, Segmented, Sheet as SheetFrame, shortDate } from './ui'
 
+type Tab = 'list' | 'memories' | 'settings'
 type OwnerTab = 'both' | 'partner' | 'me' | 'all'
 type Sort = 'new' | 'priority'
-type Sheet = { kind: 'edit'; id: string } | { kind: 'detail'; id: string } | { kind: 'complete'; id: string } | { kind: 'settings' } | { kind: 'filter' }
+type Sheet = { kind: 'edit'; id: string } | { kind: 'detail'; id: string } | { kind: 'complete'; id: string } | { kind: 'filter' }
 type Toast = { text: string; action?: { label: string; run: () => void } }
 
 const millis = (t: Item['createdAt']) => t?.toMillis() ?? Number.MAX_SAFE_INTEGER
@@ -110,6 +113,7 @@ function Line({ swipeable, onSwipe, onOpen, className, children }: { swipeable: 
 
 export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
   const { space, members, items } = useSpace(spaceId)
+  const [tab, setTab] = useState<Tab>('list')
   const [ownerTab, setOwnerTab] = useState<OwnerTab>('both')
   const [category, setCategory] = useState<string>('all')
   const [sort, setSort] = useState<Sort>('new')
@@ -159,12 +163,6 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
     return list
   }, [byOwner, category, keyword, sort])
 
-  // 紙の右上に貼る写真は、いちばん最近の思い出から
-  const pinnedPhoto = useMemo(
-    () => (items ?? []).filter((i) => i.done && i.thumb).sort((a, b) => millis(b.doneAt) - millis(a.doneAt))[0]?.thumb ?? null,
-    [items],
-  )
-
   if (!space || !items) return <div className="loading">ひらいています…</div>
 
   const sheetItem = sheet && 'id' in sheet ? items.find((i) => i.id === sheet.id) : undefined
@@ -202,7 +200,7 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
   }
 
   const complete = (item: Item) => {
-    markDone(spaceId, item.id).catch((err) => alert('書き込めませんでした: ' + err))
+    markDone(spaceId, item.id, uid).catch((err) => alert('書き込めませんでした: ' + err))
     setToast({ text: `「${item.title}」をかなえました`, action: { label: '思い出を残す', run: () => setSheet({ kind: 'complete', id: item.id }) } })
   }
 
@@ -214,56 +212,62 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
     setPicked(next)
   }
 
+  const tabs: { key: Tab; label: string; icon: 'list' | 'memories' | 'gear' }[] = [
+    { key: 'list', label: 'リスト', icon: 'list' },
+    { key: 'memories', label: '思い出', icon: 'memories' },
+    { key: 'settings', label: '設定', icon: 'gear' },
+  ]
+
   return (
-    <main className="app">
+    <main className={'app on-' + tab}>
       <header className="top">
         <div className="top-row">
-          <h1>バケットリスト</h1>
-          <div className="top-actions">
-            <button
-              className={'icon-btn' + (searching ? ' active' : '')}
-              onClick={() => {
-                if (searching) setKeyword('')
-                setSearching(!searching)
-              }}
-              aria-label="さがす"
-              aria-pressed={searching}
-            >
-              <Icon name="search" />
-            </button>
-            <button className={'icon-btn' + (filtered ? ' marked' : '')} onClick={() => setSheet({ kind: 'filter' })} aria-label="絞り込みと設定">
-              <Icon name="settings" />
-            </button>
+          <div className="greeting">
+            <p className="hello">こんにちは、{me?.displayName}</p>
+            <h1 className="headline">{tab === 'list' ? 'ふたりのやりたいこと' : tab === 'memories' ? 'ふたりの思い出' : '設定'}</h1>
           </div>
+          {tab === 'list' && (
+            <div className="top-actions">
+              <button
+                className={'icon-btn' + (searching ? ' active' : '')}
+                onClick={() => {
+                  if (searching) setKeyword('')
+                  setSearching(!searching)
+                }}
+                aria-label="さがす"
+                aria-pressed={searching}
+              >
+                <Icon name="search" />
+              </button>
+              <button className={'icon-btn' + (filtered ? ' marked' : '')} onClick={() => setSheet({ kind: 'filter' })} aria-label="絞り込み">
+                <Icon name="settings" />
+              </button>
+            </div>
+          )}
         </div>
-        {searching && (
+        {tab === 'list' && searching && (
           <div className="search">
             <Icon name="search" size={18} />
             <input type="search" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="ことばでさがす" aria-label="さがすことば" autoFocus />
           </div>
         )}
-        <Segmented
-          label="だれの"
-          options={[
-            { value: 'both', label: 'ふたりで' },
-            { value: 'partner', label: partner?.displayName ?? '相手' },
-            { value: 'me', label: me?.displayName ?? '自分' },
-            { value: 'all', label: 'すべて' },
-          ]}
-          value={ownerTab}
-          onChange={setOwnerTab}
-        />
+        {tab !== 'settings' && (
+          <Segmented
+            label="だれの"
+            options={[
+              { value: 'both', label: 'ふたりで' },
+              { value: 'partner', label: partner?.displayName ?? '相手' },
+              { value: 'me', label: me?.displayName ?? '自分' },
+              { value: 'all', label: 'すべて' },
+            ]}
+            value={ownerTab}
+            onChange={setOwnerTab}
+          />
+        )}
       </header>
 
-      <section className="paper">
-        {pinnedPhoto && (
-          <button className="pinned" onClick={pickRandom} aria-label="今日の一枚（迷ったら、ひとつ選びます）">
-            <span className="tape" aria-hidden />
-            <img src={pinnedPhoto} alt="" />
-          </button>
-        )}
-        <header className="paper-head">
-          <h2 className="paper-title">{whose}のやりたいこと</h2>
+      {tab === 'list' && (
+        <section className="paper">
           <p className="paper-tally">
             <button className={onlyOpen ? 'on' : ''} onClick={() => setOnlyOpen(!onlyOpen)} aria-pressed={onlyOpen}>
               これから {openCount}
@@ -272,66 +276,106 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
             <span>かなえた {doneCount}</span>
             {category !== 'all' && <span className="paper-filter">{findCategory(space.categories, category).name}</span>}
           </p>
-        </header>
 
-        <ol className="lines">
-          {lines.map((item, i) => {
-            const ink = inkOf(item.createdBy, memberOrder)
-            return (
-              <Line
-                key={item.id}
-                className={['row', item.done ? 'done' : '', item.done && onlyOpen ? 'dim' : '', fresh.isAdded(item) ? 'appear' : ''].filter(Boolean).join(' ')}
-                swipeable={!item.done}
-                onSwipe={() => complete(item)}
-                onOpen={() => setSheet({ kind: 'detail', id: item.id })}
-              >
-                <span className="row-no">{i + 1}</span>
-                <span className={'row-text ' + ink}>
-                  {item.done ? (
-                    <>
-                      <s className={fresh.isStruck(item) ? 'strike drawing' : 'strike'}>{item.title}</s>
-                      {item.doneAt && (
-                        <span className="row-done-date" aria-label={`${shortDate(item.doneAt.toDate())}にかなえた`}>
-                          {shortDate(item.doneAt.toDate())}
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    item.title
-                  )}
-                </span>
-                <span className="row-date">{item.createdAt && shortDate(item.createdAt.toDate())}</span>
-                {item.thumb && (
-                  <span className="row-photo" aria-hidden>
-                    <span className="tape" />
-                    <img src={item.thumb} alt="" />
+          <ol className="lines">
+            {lines.map((item, i) => {
+              const ink = inkOf(item.createdBy, memberOrder)
+              const pale = paleOf(item.category)
+              return (
+                <Line
+                  key={item.id}
+                  className={['row', item.done ? 'done' : '', item.done && onlyOpen ? 'dim' : '', fresh.isAdded(item) ? 'appear' : ''].filter(Boolean).join(' ')}
+                  swipeable={!item.done}
+                  onSwipe={() => complete(item)}
+                  onOpen={() => setSheet({ kind: 'detail', id: item.id })}
+                >
+                  <span className="row-no">{i + 1}</span>
+                  {/* 分類は、行頭に貼った淡い色のテープで */}
+                  <span className="cat-tape" style={{ background: pale }} title={findCategory(space.categories, item.category).name} aria-hidden />
+                  <span className={'row-text ' + ink}>
+                    {item.done ? (
+                      <>
+                        <s className={fresh.isStruck(item) ? 'strike drawing' : 'strike'} style={{ ['--hl' as string]: pale }}>
+                          {item.title}
+                        </s>
+                        {item.doneAt && (
+                          <span className="row-done-date" aria-label={`${shortDate(item.doneAt.toDate())}にかなえた`}>
+                            {shortDate(item.doneAt.toDate())}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      item.title
+                    )}
                   </span>
-                )}
-              </Line>
-            )
-          })}
-        </ol>
-        {lines.length === 0 && <p className="paper-empty">{keyword ? '見つかりませんでした' : '下の欄から書いてみましょう'}</p>}
-      </section>
+                  <span className="row-side">
+                    <Avatar member={members.find((m) => m.uid === item.createdBy)} ink={ink} size={22} />
+                    {/* かなえた行は、線の横に達成日を書くので右の日付は省く */}
+                    {!item.done && <span className="row-date">{item.createdAt && shortDate(item.createdAt.toDate())}</span>}
+                  </span>
+                </Line>
+              )
+            })}
+          </ol>
+          {lines.length === 0 &&
+            (keyword || category !== 'all' ? (
+              <p className="paper-empty">見つかりませんでした</p>
+            ) : (
+              <div className="paper-blank">
+                <CoupleArt />
+                <p>
+                  ふたりでやりたいことを、
+                  <br />
+                  ひとつ書いてみましょう
+                </p>
+              </div>
+            ))}
+        </section>
+      )}
 
-      <form className="composer" onSubmit={write}>
-        <input
-          ref={draftInput}
-          className={inkOf(uid, memberOrder)}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={onDraftKeyDown}
-          onCompositionStart={() => (composing.current = true)}
-          onCompositionEnd={() => (composing.current = false)}
-          placeholder={`${whose}のやりたいことを書く`}
-          maxLength={100}
-          enterKeyHint="done"
-          aria-label="やりたいことを書き足す"
+      {tab === 'memories' && (
+        <Memories
+          spaceId={spaceId}
+          items={byOwner}
+          members={members}
+          memberOrder={memberOrder}
+          categories={space.categories}
+          onOpen={(item) => setSheet({ kind: 'detail', id: item.id })}
+          onPick={pickRandom}
         />
-        <button className="composer-send" aria-label="書き足す">
-          <Icon name="plus" />
-        </button>
-      </form>
+      )}
+
+      {tab === 'settings' && <Settings space={space} uid={uid} members={members} items={items} />}
+
+      {tab === 'list' && (
+        <form className="composer" onSubmit={write}>
+          <input
+            ref={draftInput}
+            className={inkOf(uid, memberOrder)}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={onDraftKeyDown}
+            onCompositionStart={() => (composing.current = true)}
+            onCompositionEnd={() => (composing.current = false)}
+            placeholder={`${whose}のやりたいことを書く`}
+            maxLength={100}
+            enterKeyHint="done"
+            aria-label="やりたいことを書き足す"
+          />
+          <button className="composer-send" aria-label="書き足す">
+            <Icon name="plus" />
+          </button>
+        </form>
+      )}
+
+      <nav className="tabbar" aria-label="画面の切り替え">
+        {tabs.map((t) => (
+          <button key={t.key} className={tab === t.key ? 'active' : ''} aria-current={tab === t.key ? 'page' : undefined} onClick={() => setTab(t.key)}>
+            <Icon name={t.icon} size={22} />
+            <span>{t.label}</span>
+          </button>
+        ))}
+      </nav>
 
       {toast && (
         <div className="toast" role="status">
@@ -408,9 +452,6 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
               <button className="btn primary" onClick={() => setSheet(null)}>
                 この条件で見る
               </button>
-              <button className="btn ghost" onClick={() => setSheet({ kind: 'settings' })}>
-                設定（名前・写真・招待コード・分類）
-              </button>
             </div>
           </div>
         </SheetFrame>
@@ -440,12 +481,12 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
       {sheet?.kind === 'complete' && sheetItem && (
         <CompleteForm
           spaceId={spaceId}
+          uid={uid}
           item={sheetItem}
           // はじめてかなえたときは紙に戻り、線を引くところを見せる
           onClose={(saved) => setSheet(saved && !sheetItem.done ? null : { kind: 'detail', id: sheetItem.id })}
         />
       )}
-      {sheet?.kind === 'settings' && <Settings space={space} uid={uid} members={members} items={items} onClose={() => setSheet(null)} />}
     </main>
   )
 }
