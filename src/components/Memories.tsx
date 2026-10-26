@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchPhotos } from '../data'
-import { findCategory, paleOf } from '../categories'
+import { findCategory, tapeOf } from '../categories'
 import type { Category, Item, Member } from '../types'
 import { CategoryArt, CoupleArt } from './illustrations'
 import { Avatar, formatDate, inkOf } from './ui'
@@ -11,6 +11,8 @@ interface Props {
   members: Member[]
   memberOrder: string[]
   categories: Category[]
+  /** 線画の塗り（選んでいる人のインクをごく薄く） */
+  artFill: string
   onOpen: (item: Item) => void
   onPick: () => void
 }
@@ -26,7 +28,7 @@ function todaysMemory(memories: Item[]): Item | undefined {
   return pool[day % pool.length]
 }
 
-export function Memories({ spaceId, items, members, memberOrder, categories, onOpen, onPick }: Props) {
+export function Memories({ spaceId, items, members, memberOrder, categories, artFill, onOpen, onPick }: Props) {
   const memories = useMemo(() => items.filter((i) => i.done).sort((a, b) => millis(b.doneAt) - millis(a.doneAt)), [items])
   const today = todaysMemory(memories)
   const [todayPhoto, setTodayPhoto] = useState<string | null>(null)
@@ -51,7 +53,7 @@ export function Memories({ spaceId, items, members, memberOrder, categories, onO
   if (!memories.length) {
     return (
       <section className="memories-empty">
-        <CoupleArt />
+        <CoupleArt fill={artFill} />
         <p>かなえたことが、ここに並んでいきます</p>
         <button className="btn ghost" onClick={onPick}>
           今日やることを、ひとつ選ぶ
@@ -64,10 +66,10 @@ export function Memories({ spaceId, items, members, memberOrder, categories, onO
     <section className="memories">
       {today && (
         <>
-          <button className="today-card" style={{ background: paleOf(today.category) }} onClick={() => onOpen(today)}>
+          <button className="today-card" style={{ ['--cat' as string]: tapeOf(today.category) }} onClick={() => onOpen(today)}>
             <span className="today-label">今日の一枚</span>
             <span className="today-media">
-              {todayPhoto || today.thumb ? <img src={todayPhoto ?? today.thumb!} alt="" /> : <CategoryArt category={today.category} color="#fbf6ea" />}
+              {todayPhoto || today.thumb ? <img src={todayPhoto ?? today.thumb!} alt="" /> : <CategoryArt category={today.category} fill={artFill} />}
             </span>
             <span className="today-title">{today.title}</span>
             <span className="memory-meta">
@@ -87,9 +89,9 @@ export function Memories({ spaceId, items, members, memberOrder, categories, onO
       <ul className="memory-grid">
         {memories.map((item) => (
           <li key={item.id}>
-            <button className="memory-card" style={{ background: paleOf(item.category) }} onClick={() => onOpen(item)}>
+            <button className="memory-card" style={{ ['--cat' as string]: tapeOf(item.category) }} onClick={() => onOpen(item)}>
               <span className="memory-media">
-                {item.thumb ? <img src={item.thumb} alt="" /> : <CategoryArt category={item.category} color="#fbf6ea" />}
+                {item.thumb ? <img src={item.thumb} alt="" /> : <CategoryArt category={item.category} fill={artFill} />}
               </span>
               <span className="memory-title">{item.title}</span>
               <span className="memory-meta">

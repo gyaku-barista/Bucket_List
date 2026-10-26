@@ -21,31 +21,33 @@ export function findCategory(categories: Category[], id: string): Category {
   return categories.find((c) => c.id === id) ?? FALLBACK
 }
 
-/** カテゴリの淡い色。紙の上ではテープや蛍光ペンの跡として使う */
-const PALE = {
-  sky: '#d8e6f0',
-  pink: '#f2dcd8',
-  yellow: '#f5e9c8',
-  green: '#dde8d8',
+/**
+ * 分類の色。紙の上では半透明のテープ（と蛍光ペンの跡）として使い、
+ * 思い出のカードではこの色を紙の色で薄めて敷く。
+ */
+const TAPE = {
+  sky: '#a9c6d9',
+  rose: '#e3b5a8',
+  honey: '#e8cf94',
+  sage: '#b5c9a5',
+  lilac: '#d3c7e0',
 }
 
-const PALE_OF: Record<string, string> = {
-  travel: PALE.sky,
-  outing: PALE.sky,
-  movie: PALE.pink,
-  event: PALE.pink,
-  anniversary: PALE.pink,
-  cafe: PALE.yellow,
-  restaurant: PALE.yellow,
-  shopping: PALE.yellow,
-  book: PALE.green,
-  activity: PALE.green,
-  home: PALE.green,
+const TAPE_OF: Record<string, string> = {
+  travel: TAPE.sky,
+  outing: TAPE.sky,
+  movie: TAPE.rose,
+  event: TAPE.rose,
+  anniversary: TAPE.rose,
+  cafe: TAPE.honey,
+  restaurant: TAPE.honey,
+  shopping: TAPE.honey,
+  book: TAPE.sage,
+  activity: TAPE.sage,
+  home: TAPE.sage,
 }
 
-/** 色の決まっていない分類（その他・自分で足した分類）は、ふつうのマスキングテープの色 */
-export const PLAIN_TAPE = '#e6dcc8'
-
-export function paleOf(categoryId: string): string {
-  return PALE_OF[categoryId] ?? PLAIN_TAPE
+/** その他・自分で足した分類は、薄い藤色 */
+export function tapeOf(categoryId: string): string {
+  return TAPE_OF[categoryId] ?? TAPE.lilac
 }

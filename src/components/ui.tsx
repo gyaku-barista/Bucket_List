@@ -4,7 +4,7 @@ import type { Member } from '../types'
 /** 写真があれば写真、なければ名前の一文字目を書いた人のインクで */
 export function Avatar({ member, ink, size = 28 }: { member: Member | undefined; ink?: string; size?: number }) {
   const style = { width: size, height: size, fontSize: size * 0.46 }
-  if (member?.avatar) return <img className="avatar" src={member.avatar} alt="" style={style} />
+  if (member?.avatar) return <img className={'avatar ' + (ink ?? '')} src={member.avatar} alt="" style={style} />
   return (
     <span className={'avatar avatar-text ' + (ink ?? '')} style={style} aria-hidden>
       {member?.displayName ? Array.from(member.displayName)[0] : ''}
@@ -17,6 +17,13 @@ export function Avatar({ member, ink, size = 28 }: { member: Member | undefined;
  */
 export function inkOf(uid: string | undefined, memberOrder: string[]): string {
   return memberOrder.indexOf(uid ?? '') === 1 ? 'ink-b' : 'ink-a'
+}
+
+const INK_COLOR: Record<string, string> = { 'ink-a': '#2e4a6b', 'ink-b': '#9a5b3f' }
+
+/** 線画の塗りに使う、インクをごく薄く紙に溶かした色 */
+export function wash(ink: string): string {
+  return `color-mix(in srgb, ${INK_COLOR[ink] ?? INK_COLOR['ink-a']} 18%, #fcf8f0)`
 }
 
 const ICONS = {

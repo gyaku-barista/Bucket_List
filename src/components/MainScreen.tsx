@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import { addItem, markDone } from '../data'
-import { findCategory, paleOf } from '../categories'
+import { findCategory, tapeOf } from '../categories'
 import { useSpace } from '../hooks'
 import type { Item } from '../types'
 import { CompleteForm } from './CompleteForm'
@@ -9,7 +9,7 @@ import { ItemForm } from './ItemForm'
 import { Settings } from './Settings'
 import { CoupleArt } from './illustrations'
 import { Memories } from './Memories'
-import { Avatar, Chips, Icon, inkOf, Segmented, Sheet as SheetFrame, shortDate } from './ui'
+import { Avatar, Chips, Icon, inkOf, Segmented, Sheet as SheetFrame, shortDate, wash } from './ui'
 
 type Tab = 'list' | 'memories' | 'settings'
 type OwnerTab = 'both' | 'partner' | 'me' | 'all'
@@ -170,6 +170,30 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
   const doneCount = lines.length - openCount
   const whose = ownerTab === 'both' ? 'ふたり' : ownerTab === 'me' ? (me?.displayName ?? '自分') : ownerTab === 'partner' ? (partner?.displayName ?? '相手') : 'みんな'
   const filtered = category !== 'all' || sort !== 'new'
+  const myName = me?.displayName ?? '自分'
+  const partnerName = partner?.displayName ?? '相手'
+  // 空のときの一文（罫線に合わせて行ごとに書く）
+  const emptyLines =
+    ownerTab === 'both'
+      ? ['ふたりでやりたいことを、', 'ひとつ書いてみましょう']
+      : ownerTab === 'me'
+        ? [`${myName}のやりたいことを、`, 'ひとつ書いてみましょう']
+        : ownerTab === 'partner'
+          ? partner
+            ? [`${partnerName}のやりたいことは、`, 'まだありません']
+            : [`${partnerName}を招待すると、`, `ここに${partnerName}の`, 'やりたいことが並びます']
+          : ['最初のひとつを書いてみましょう']
+  // 線画の塗りは、選んでいる人のインクをごく薄く
+  const artFill = wash(ownerTab === 'partner' ? inkOf(partner?.uid ?? memberOrder[1], memberOrder) : inkOf(uid, memberOrder))
+
+  const invite = async () => {
+    const text = `ふたりのバケットリストに招待します。\n招待コード：${space.inviteCode}\n${location.href}`
+    if (navigator.share) await navigator.share({ text }).catch(() => {})
+    else {
+      await navigator.clipboard.writeText(text).catch(() => {})
+      setToast({ text: '招待の文面を写しました' })
+    }
+  }
 
   const write = (e?: FormEvent) => {
     e?.preventDefault()
@@ -222,10 +246,7 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
     <main className={'app on-' + tab}>
       <header className="top">
         <div className="top-row">
-          <div className="greeting">
-            <p className="hello">こんにちは、{me?.displayName}</p>
-            <h1 className="headline">{tab === 'list' ? 'ふたりのやりたいこと' : tab === 'memories' ? 'ふたりの思い出' : '設定'}</h1>
-          </div>
+          <h1 className="headline">{tab === 'list' ? 'バケットリスト' : tab === 'memories' ? '思い出' : '設定'}</h1>
           {tab === 'list' && (
             <div className="top-actions">
               <button
@@ -267,70 +288,80 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
       </header>
 
       {tab === 'list' && (
-        <section className="paper">
-          <p className="paper-tally">
-            <button className={onlyOpen ? 'on' : ''} onClick={() => setOnlyOpen(!onlyOpen)} aria-pressed={onlyOpen}>
-              これから {openCount}
-            </button>
-            <span aria-hidden>・</span>
-            <span>かなえた {doneCount}</span>
-            {category !== 'all' && <span className="paper-filter">{findCategory(space.categories, category).name}</span>}
-          </p>
+        <div className="paper-sheet">
+          <section className="paper">
+            <p className="paper-tally">
+              <button className={onlyOpen ? 'on' : ''} onClick={() => setOnlyOpen(!onlyOpen)} aria-pressed={onlyOpen}>
+                これから {openCount}
+              </button>
+              <span aria-hidden>・</span>
+              <span>かなえた {doneCount}</span>
+              {category !== 'all' && <span className="paper-filter">{findCategory(space.categories, category).name}</span>}
+            </p>
 
-          <ol className="lines">
-            {lines.map((item, i) => {
-              const ink = inkOf(item.createdBy, memberOrder)
-              const pale = paleOf(item.category)
-              return (
-                <Line
-                  key={item.id}
-                  className={['row', item.done ? 'done' : '', item.done && onlyOpen ? 'dim' : '', fresh.isAdded(item) ? 'appear' : ''].filter(Boolean).join(' ')}
-                  swipeable={!item.done}
-                  onSwipe={() => complete(item)}
-                  onOpen={() => setSheet({ kind: 'detail', id: item.id })}
-                >
-                  <span className="row-no">{i + 1}</span>
-                  {/* 分類は、行頭に貼った淡い色のテープで */}
-                  <span className="cat-tape" style={{ background: pale }} title={findCategory(space.categories, item.category).name} aria-hidden />
-                  <span className={'row-text ' + ink}>
-                    {item.done ? (
-                      <>
-                        <s className={fresh.isStruck(item) ? 'strike drawing' : 'strike'} style={{ ['--hl' as string]: pale }}>
+            <ol className="lines">
+              {lines.map((item, i) => {
+                const ink = inkOf(item.createdBy, memberOrder)
+                const tape = tapeOf(item.category)
+                return (
+                  <Line
+                    key={item.id}
+                    className={['row', item.done ? 'done' : '', item.done && onlyOpen ? 'dim' : '', fresh.isAdded(item) ? 'appear' : ''].filter(Boolean).join(' ')}
+                    swipeable={!item.done}
+                    onSwipe={() => complete(item)}
+                    onOpen={() => setSheet({ kind: 'detail', id: item.id })}
+                  >
+                    <span className="row-no">{i + 1}</span>
+                    {/* 分類は、行頭に貼った半透明のテープで */}
+                    <span className="cat-tape" style={{ background: tape }} title={findCategory(space.categories, item.category).name} aria-hidden />
+                    <span className={'row-text ' + ink}>
+                      {item.done ? (
+                        <s className={fresh.isStruck(item) ? 'strike drawing' : 'strike'} style={{ ['--hl' as string]: tape }}>
                           {item.title}
                         </s>
-                        {item.doneAt && (
-                          <span className="row-done-date" aria-label={`${shortDate(item.doneAt.toDate())}にかなえた`}>
-                            {shortDate(item.doneAt.toDate())}
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      item.title
-                    )}
-                  </span>
-                  <span className="row-side">
-                    <Avatar member={members.find((m) => m.uid === item.createdBy)} ink={ink} size={22} />
-                    {/* かなえた行は、線の横に達成日を書くので右の日付は省く */}
-                    {!item.done && <span className="row-date">{item.createdAt && shortDate(item.createdAt.toDate())}</span>}
-                  </span>
-                </Line>
-              )
-            })}
-          </ol>
-          {lines.length === 0 &&
-            (keyword || category !== 'all' ? (
-              <p className="paper-empty">見つかりませんでした</p>
-            ) : (
-              <div className="paper-blank">
-                <CoupleArt />
-                <p>
-                  ふたりでやりたいことを、
-                  <br />
-                  ひとつ書いてみましょう
-                </p>
-              </div>
-            ))}
-        </section>
+                      ) : (
+                        item.title
+                      )}
+                    </span>
+                    {/* 並びは固定：日付 → 書いた人。かなえた行は日付の位置に達成日 */}
+                    <span className="row-side">
+                      {item.done ? (
+                        // 「10/26 かなえた」は横に並べると項目名を押し出すので、日付の位置で2段にする
+                        <span className="row-date stacked">
+                          {item.doneAt && <span>{shortDate(item.doneAt.toDate())}</span>}
+                          <span>かなえた</span>
+                        </span>
+                      ) : (
+                        <span className="row-date">{item.createdAt && shortDate(item.createdAt.toDate())}</span>
+                      )}
+                      <Avatar member={members.find((m) => m.uid === item.createdBy)} ink={ink} size={22} />
+                    </span>
+                  </Line>
+                )
+              })}
+            </ol>
+            {lines.length === 0 &&
+              (keyword || category !== 'all' ? (
+                <p className="paper-empty">見つかりませんでした</p>
+              ) : (
+                <div className="paper-blank">
+                  <div className="paper-blank-art">
+                    <CoupleArt fill={artFill} />
+                  </div>
+                  <p>
+                    {emptyLines.map((line) => (
+                      <span key={line}>{line}</span>
+                    ))}
+                  </p>
+                  {ownerTab === 'partner' && !partner && (
+                    <button className="link-btn" onClick={invite}>
+                      招待する
+                    </button>
+                  )}
+                </div>
+              ))}
+          </section>
+        </div>
       )}
 
       {tab === 'memories' && (
@@ -340,6 +371,7 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
           members={members}
           memberOrder={memberOrder}
           categories={space.categories}
+          artFill={artFill}
           onOpen={(item) => setSheet({ kind: 'detail', id: item.id })}
           onPick={pickRandom}
         />
