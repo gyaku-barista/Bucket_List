@@ -12,7 +12,8 @@ import { Memories } from './Memories'
 import { Avatar, Chips, Icon, inkOf, Segmented, Sheet as SheetFrame, wash } from './ui'
 
 type Tab = 'list' | 'memories' | 'settings'
-type OwnerTab = 'both' | 'partner' | 'me' | 'all'
+/** 'both' はすべて、'partner' / 'me' はその人が書いた項目と「ふたりで」の項目 */
+type OwnerTab = 'both' | 'partner' | 'me'
 type Sort = 'new' | 'priority'
 type Sheet = { kind: 'edit'; id: string } | { kind: 'detail'; id: string } | { kind: 'complete'; id: string } | { kind: 'filter' }
 type Toast = { text: string; action?: { label: string; run: () => void } }
@@ -121,6 +122,8 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
   const [searching, setSearching] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [draft, setDraft] = useState('')
+  // 書くときの「じぶん / ふたりで」。初期値は「じぶん」
+  const [draftShared, setDraftShared] = useState(false)
   const [sheet, setSheet] = useState<Sheet | null>(null)
   const [picked, setPicked] = useState<Item | null>(null)
   const [toast, setToast] = useState<Toast | null>(null)
@@ -141,17 +144,11 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
 
   const byOwner = useMemo(() => {
     const all = items ?? []
-    switch (ownerTab) {
-      case 'both':
-        return all.filter((i) => i.owner === 'both')
-      case 'me':
-        return all.filter((i) => i.owner === uid)
-      case 'partner':
-        return all.filter((i) => i.owner !== 'both' && i.owner !== uid)
-      default:
-        return all
-    }
-  }, [items, ownerTab, uid])
+    if (ownerTab === 'both') return all
+    // その人が書いた項目と、「ふたりで」の項目
+    const person = ownerTab === 'me' ? uid : partner?.uid
+    return all.filter((i) => i.shared || i.createdBy === person)
+  }, [items, ownerTab, uid, partner?.uid])
 
   // かなえた項目も移動させず、書いた順のまま同じ紙に並べる
   const lines = useMemo(() => {
@@ -168,7 +165,6 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
   const sheetItem = sheet && 'id' in sheet ? items.find((i) => i.id === sheet.id) : undefined
   const openCount = lines.filter((i) => !i.done).length
   const doneCount = lines.length - openCount
-  const whose = ownerTab === 'both' ? 'ふたり' : ownerTab === 'me' ? (me?.displayName ?? '自分') : ownerTab === 'partner' ? (partner?.displayName ?? '相手') : 'みんな'
   const filtered = category !== 'all' || sort !== 'new'
   const myName = me?.displayName ?? '自分'
   const partnerName = partner?.displayName ?? '相手'
@@ -178,11 +174,9 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
       ? ['ふたりでやりたいことを、', 'ひとつ書いてみましょう']
       : ownerTab === 'me'
         ? [`${myName}のやりたいことを、`, 'ひとつ書いてみましょう']
-        : ownerTab === 'partner'
-          ? partner
-            ? [`${partnerName}のやりたいことは、`, 'まだありません']
-            : [`${partnerName}を招待すると、`, `ここに${partnerName}の`, 'やりたいことが並びます']
-          : ['最初のひとつを書いてみましょう']
+        : partner
+          ? [`${partnerName}のやりたいことは、`, 'まだありません']
+          : [`${partnerName}を招待すると、`, `ここに${partnerName}の`, 'やりたいことが並びます']
   // 線画の塗りは、選んでいる人のインクをごく薄く
   const artFill = wash(ownerTab === 'partner' ? inkOf(partner?.uid ?? memberOrder[1], memberOrder) : inkOf(uid, memberOrder))
 
@@ -205,7 +199,7 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
     lastWrite.current = { title, at: Date.now() }
     addItem(spaceId, uid, {
       title,
-      owner: ownerTab === 'me' ? uid : ownerTab === 'partner' && partner ? partner.uid : 'both',
+      shared: draftShared,
       category: category === 'all' ? 'other' : category,
       memo: '',
       place: '',
@@ -277,9 +271,8 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
             label="だれの"
             options={[
               { value: 'both', label: 'ふたりで' },
-              { value: 'partner', label: partner?.displayName ?? '相手' },
-              { value: 'me', label: me?.displayName ?? '自分' },
-              { value: 'all', label: 'すべて' },
+              { value: 'partner', label: partnerName },
+              { value: 'me', label: myName },
             ]}
             value={ownerTab}
             onChange={setOwnerTab}
@@ -323,10 +316,18 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
                         item.title
                       )}
                     </span>
-                    {/* 右端は書いた人だけ。日付は詳細シートに */}
+                    {/* 右端は書いた人。「ふたりで」の項目はふたりのアイコンを少し重ねて */}
                     <span className="row-side">
                       {item.done && <span className="row-done">かなえた</span>}
-                      <Avatar member={members.find((m) => m.uid === item.createdBy)} ink={ink} size={22} />
+                      {item.shared ? (
+                        <span className="avatar-pair" aria-label="ふたりで">
+                          {memberOrder.map((id) => (
+                            <Avatar key={id} member={members.find((m) => m.uid === id)} ink={inkOf(id, memberOrder)} size={22} />
+                          ))}
+                        </span>
+                      ) : (
+                        <Avatar member={members.find((m) => m.uid === item.createdBy)} ink={ink} size={22} />
+                      )}
                     </span>
                   </Line>
                 )
@@ -373,6 +374,23 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
 
       {tab === 'list' && (
         <form className="composer" onSubmit={write}>
+          <span className="share-toggle" role="radiogroup" aria-label="だれのやりたいこと">
+            {[
+              { shared: false, label: 'じぶん' },
+              { shared: true, label: 'ふたりで' },
+            ].map((o) => (
+              <button
+                type="button"
+                key={o.label}
+                role="radio"
+                aria-checked={draftShared === o.shared}
+                className={draftShared === o.shared ? 'active' : ''}
+                onClick={() => setDraftShared(o.shared)}
+              >
+                {o.label}
+              </button>
+            ))}
+          </span>
           <input
             ref={draftInput}
             className={inkOf(uid, memberOrder)}
@@ -381,7 +399,7 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
             onKeyDown={onDraftKeyDown}
             onCompositionStart={() => (composing.current = true)}
             onCompositionEnd={() => (composing.current = false)}
-            placeholder={`${whose}のやりたいことを書く`}
+            placeholder={draftShared ? 'ふたりでやりたいことを書く' : `${myName}のやりたいことを書く`}
             maxLength={100}
             enterKeyHint="done"
             aria-label="やりたいことを書き足す"
@@ -483,7 +501,6 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
       {sheet?.kind === 'edit' && sheetItem && (
         <ItemForm
           spaceId={spaceId}
-          uid={uid}
           members={members}
           categories={space.categories}
           item={sheetItem}

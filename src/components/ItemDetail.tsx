@@ -20,7 +20,7 @@ export function ItemDetail({ spaceId, item, members, memberOrder, categories, on
   const [viewing, setViewing] = useState<number | null>(null)
   const category = findCategory(categories, item.category)
   const creator = members.find((m) => m.uid === item.createdBy)
-  const ownerLabel = item.owner === 'both' ? 'ふたりで' : (members.find((m) => m.uid === item.owner)?.displayName ?? '')
+  const ownerLabel = item.shared ? 'ふたりで' : (creator?.displayName ?? '')
   const ink = inkOf(item.createdBy, memberOrder)
 
   // スナップショットのたびに配列が作り直されるので、中身が変わったときだけ再取得する

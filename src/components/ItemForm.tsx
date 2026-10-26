@@ -5,7 +5,6 @@ import { Chips, Dots, Segmented, Sheet } from './ui'
 
 interface Props {
   spaceId: string
-  uid: string
   members: Member[]
   categories: Category[]
   item: Item
@@ -13,10 +12,10 @@ interface Props {
 }
 
 /** 書いた項目を書き直す（追加はリストの空いた行から） */
-export function ItemForm({ spaceId, uid, members, categories, item, onClose }: Props) {
+export function ItemForm({ spaceId, members, categories, item, onClose }: Props) {
   const [form, setForm] = useState<ItemInput>({
     title: item.title,
-    owner: item.owner,
+    shared: item.shared ?? false,
     category: item.category,
     memo: item.memo,
     place: item.place,
@@ -25,13 +24,7 @@ export function ItemForm({ spaceId, uid, members, categories, item, onClose }: P
   })
   const set = <K extends keyof ItemInput>(key: K, value: ItemInput[K]) => setForm((f) => ({ ...f, [key]: value }))
 
-  const me = members.find((m) => m.uid === uid)
-  const partner = members.find((m) => m.uid !== uid)
-  const owners = [
-    { value: 'both', label: 'ふたりで' },
-    { value: uid, label: me?.displayName ?? '自分' },
-    ...(partner ? [{ value: partner.uid, label: partner.displayName }] : []),
-  ]
+  const writer = members.find((m) => m.uid === item.createdBy)
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -50,7 +43,15 @@ export function ItemForm({ spaceId, uid, members, categories, item, onClose }: P
 
         <div className="field">
           <span className="field-label">だれの</span>
-          <Segmented label="だれの" options={owners} value={form.owner} onChange={(v) => set('owner', v)} />
+          <Segmented
+            label="だれの"
+            options={[
+              { value: 'self', label: writer?.displayName ?? 'じぶん' },
+              { value: 'shared', label: 'ふたりで' },
+            ]}
+            value={form.shared ? 'shared' : 'self'}
+            onChange={(v) => set('shared', v === 'shared')}
+          />
         </div>
 
         <div className="field">

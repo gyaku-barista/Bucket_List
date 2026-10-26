@@ -68,7 +68,7 @@ export async function updateCategories(spaceId: string, categories: Category[]) 
   await updateDoc(spaceRef(spaceId), { categories })
 }
 
-export type ItemInput = Pick<Item, 'title' | 'owner' | 'category' | 'memo' | 'place' | 'url' | 'priority'>
+export type ItemInput = Pick<Item, 'title' | 'category' | 'memo' | 'place' | 'url' | 'priority'> & { shared: boolean }
 
 export async function addItem(spaceId: string, uid: string, input: ItemInput) {
   await addDoc(itemsCol(spaceId), {

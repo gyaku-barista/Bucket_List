@@ -21,13 +21,15 @@ export interface Member {
   avatar: string | null
 }
 
-/** 'both' = ふたりで / それ以外はやりたい人の uid */
+/** 旧バージョンの「だれの」。'both' = ふたりで / それ以外は uid。表示には使わない */
 export type Owner = 'both' | string
 
 export interface Item {
   id: string
   title: string
-  owner: Owner
+  /** ふたりでやりたいこと。無い（古い項目）・false なら、書いた人「じぶん」のやりたいこと */
+  shared?: boolean
+  owner?: Owner
   category: string
   memo: string
   place: string
