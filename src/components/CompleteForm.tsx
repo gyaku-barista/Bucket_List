@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { fetchPhotos, saveCompletion } from '../data'
-import { compressImage, squareThumb } from '../image'
+import { compressImage, imageErrorMessage, squareThumb } from '../image'
 import type { Item, Photo } from '../types'
 import { Dots, Sheet, toLocalInput } from './ui'
 
@@ -36,8 +36,8 @@ export function CompleteForm({ spaceId, uid, item, onClose }: { spaceId: string;
       const list = Array.from(files).slice(0, MAX_PHOTOS - total)
       const compressed = await Promise.all(list.map((f) => compressImage(f, 1280)))
       setAdded((a) => [...a, ...compressed])
-    } catch {
-      alert('画像を読み込めませんでした')
+    } catch (err) {
+      alert(imageErrorMessage(err))
     } finally {
       setProcessing(false)
     }

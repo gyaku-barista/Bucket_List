@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { updateCategories, updateProfile } from '../data'
-import { squareThumb } from '../image'
+import { imageErrorMessage, squareThumb } from '../image'
 import type { Item, Member, Space } from '../types'
 import { Avatar, inkOf } from './ui'
 
@@ -29,8 +29,8 @@ export function Settings({ space, uid, members, items }: Props) {
     if (!file) return
     try {
       await updateProfile(space.id, uid, { avatar: await squareThumb(file, 256) })
-    } catch {
-      alert('画像を読み込めませんでした')
+    } catch (err) {
+      alert(imageErrorMessage(err))
     }
   }
 
@@ -146,6 +146,7 @@ export function Settings({ space, uid, members, items }: Props) {
           ログアウト
         </button>
       </div>
+      <p className="note version">バージョン {__APP_VERSION__}</p>
     </section>
   )
 }

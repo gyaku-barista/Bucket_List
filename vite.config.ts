@@ -1,11 +1,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { execSync } from 'node:child_process'
+
+// 設定画面に出すバージョン（どの版を開いているか確かめるため）
+const version = (process.env.GITHUB_SHA ?? execSync('git rev-parse HEAD').toString()).trim().slice(0, 7)
 
 export default defineConfig({
   // 相対パスにしておくと GitHub Pages のサブパスでもそのまま動く
   base: './',
   build: { chunkSizeWarningLimit: 3500 },
+  define: { __APP_VERSION__: JSON.stringify(version) },
   plugins: [
     react(),
     VitePWA({

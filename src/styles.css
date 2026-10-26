@@ -1508,3 +1508,9 @@ textarea {
   border-radius: 22px;
   background: var(--surface);
 }
+
+.note.version {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 12px;
+}

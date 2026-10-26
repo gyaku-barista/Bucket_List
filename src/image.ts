@@ -1,8 +1,19 @@
-/** HEIF (.heic) かどうかを、ファイルの先頭の印で見分ける */
-async function isHeif(file: Blob): Promise<boolean> {
+/** ファイルの先頭にある形式の印（HEIF なら ftyp の後ろの heic など） */
+async function brandOf(file: Blob): Promise<string> {
   const head = new Uint8Array(await file.slice(0, 12).arrayBuffer())
   const box = String.fromCharCode(...head.slice(4, 12))
-  return box.startsWith('ftyp') && /^(heic|heix|hevc|hevx|heim|heis|mif1|msf1)$/.test(box.slice(4))
+  return box.startsWith('ftyp') ? box.slice(4).trim() : Array.from(head.slice(0, 4), (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+const HEIF_BRANDS = /^(heic|heix|hevc|hevx|heim|heis|mif1|msf1)$/
+
+/** 写真を読み込めなかったとき、どこで何が起きたかを伝えるためのエラー */
+export class ImageLoadError extends Error {}
+
+function describe(file: Blob, brand: string): string {
+  const name = file instanceof File ? file.name : ''
+  const kb = Math.round(file.size / 1024)
+  return [name, file.type || '形式不明', `${kb}KB`, brand && `印:${brand}`].filter(Boolean).join(' / ')
 }
 
 /**
@@ -11,13 +22,24 @@ async function isHeif(file: Blob): Promise<boolean> {
  * そのときだけ変換の部品を読み込んで変換する（ふだんはアプリを重くしない）。
  */
 async function decode(file: Blob): Promise<ImageBitmap> {
+  if (file.size === 0) throw new ImageLoadError('写真の中身を受け取れませんでした（写真を選ぶ画面の段階で失敗しています）')
   try {
     return await createImageBitmap(file, { imageOrientation: 'from-image' })
   } catch (err) {
-    if (!(await isHeif(file))) throw err
-    const { heicTo } = await import('heic-to')
-    return heicTo({ blob: file, type: 'bitmap', options: { imageOrientation: 'from-image' } })
+    const brand = await brandOf(file)
+    if (!HEIF_BRANDS.test(brand)) throw new ImageLoadError(`この形式の写真は読み込めませんでした\n${describe(file, brand)}\n${err}`)
+    try {
+      const { heicTo } = await import('heic-to')
+      return await heicTo({ blob: file, type: 'bitmap', options: { imageOrientation: 'from-image' } })
+    } catch (heifErr) {
+      throw new ImageLoadError(`HEIF の写真を変換できませんでした\n${describe(file, brand)}\n${heifErr}`)
+    }
   }
+}
+
+/** アラートに出す文面 */
+export function imageErrorMessage(err: unknown): string {
+  return err instanceof ImageLoadError ? err.message : `写真を読み込めませんでした\n${err}`
 }
 
 /**
