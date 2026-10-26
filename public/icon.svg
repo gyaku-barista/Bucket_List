@@ -1,15 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <radialGradient id="glow" cx="0.85" cy="0.1" r="0.8">
-      <stop offset="0" stop-color="#ff4b2b" stop-opacity="0.55"/>
-      <stop offset="1" stop-color="#0d0b0a" stop-opacity="0"/>
-    </radialGradient>
-  </defs>
-  <rect width="512" height="512" fill="#0d0b0a"/>
-  <rect width="512" height="512" fill="url(#glow)"/>
-  <g transform="rotate(-7 256 256)">
-    <rect x="128" y="112" width="256" height="300" fill="#ede4d3"/>
-    <rect x="148" y="132" width="216" height="216" fill="#15110f"/>
-    <circle cx="256" cy="240" r="58" fill="#ff4b2b"/>
+  <rect width="512" height="512" fill="#f5f0e6"/>
+  <g stroke="#3d4f6b" stroke-opacity="0.16" stroke-width="3">
+    <path d="M0 152H512M0 232H512M0 312H512M0 392H512"/>
+  </g>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M112 212c30-14 62-18 96-10s58 2 84-8 54-12 80-6 40 2 30 0" stroke="#2b2b2b" stroke-opacity="0.82" stroke-width="12"/>
+    <path d="M112 292c34-10 70-8 104-2s70 4 104-6" stroke="#2b2b2b" stroke-opacity="0.82" stroke-width="12"/>
+    <path d="M96 296c60-14 132-4 196-10 44-4 84-10 128-4" stroke="#3d4f6b" stroke-width="9"/>
   </g>
 </svg>

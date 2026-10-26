@@ -1,26 +1,27 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState } from 'react'
 import { deleteItem, fetchPhotos, undoCompletion } from '../data'
-import { findCategory, markOf } from '../categories'
+import { findCategory } from '../categories'
 import type { Category, Item, Member, Photo } from '../types'
-import { Avatar, formatDate, Pips, Sheet } from './ui'
+import { Dots, formatDate, inkOf, Sheet } from './ui'
 
 interface Props {
   spaceId: string
   item: Item
-  frameNo: number
   members: Member[]
+  memberOrder: string[]
   categories: Category[]
   onEdit: () => void
   onComplete: () => void
   onClose: () => void
 }
 
-export function ItemDetail({ spaceId, item, frameNo, members, categories, onEdit, onComplete, onClose }: Props) {
+export function ItemDetail({ spaceId, item, members, memberOrder, categories, onEdit, onComplete, onClose }: Props) {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [viewing, setViewing] = useState<number | null>(null)
   const category = findCategory(categories, item.category)
   const creator = members.find((m) => m.uid === item.createdBy)
   const ownerLabel = item.owner === 'both' ? 'ふたりで' : (members.find((m) => m.uid === item.owner)?.displayName ?? '')
+  const ink = inkOf(item.createdBy, memberOrder)
 
   // スナップショットのたびに配列が作り直されるので、中身が変わったときだけ再取得する
   const photoKey = item.photoIds.join(',')
@@ -32,44 +33,46 @@ export function ItemDetail({ spaceId, item, frameNo, members, categories, onEdit
     )
   }, [spaceId, item.id, item.done, photoKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const remove = async () => {
-    if (!confirm(`「${item.title}」を削除しますか？\n写真や記録も削除されます。`)) return
-    deleteItem(spaceId, item).catch((err) => alert('削除に失敗しました: ' + err))
+  const remove = () => {
+    if (!confirm(`「${item.title}」を捨てますか？\n写真や思い出のことばも一緒に消えます。`)) return
+    deleteItem(spaceId, item).catch((err) => alert('捨てられませんでした: ' + err))
     onClose()
   }
 
   const undo = () => {
-    if (!confirm('「これから」に戻しますか？（写真やメモは残ります）')) return
-    undoCompletion(spaceId, item.id).catch((err) => alert('更新に失敗しました: ' + err))
+    if (!confirm('線を消して、これからに戻しますか？（写真やことばは残ります）')) return
+    undoCompletion(spaceId, item.id).catch((err) => alert('戻せませんでした: ' + err))
   }
 
   return (
-    <Sheet kicker={`No.${String(frameNo).padStart(2, '0')} — ${item.done ? 'DEVELOPED' : 'LATENT'}`} title={category.name} onClose={onClose}>
+    <Sheet title={item.done ? 'かなえたこと' : 'これからのこと'} onClose={onClose}>
       <div className="detail">
-        <span className="detail-mark" aria-hidden>
-          {markOf(category)}
-        </span>
-        <h3 className="detail-title">{item.title}</h3>
-        <dl className="spec">
+        <p className={'detail-title ' + ink}>{item.done ? <s className="strike">{item.title}</s> : item.title}</p>
+
+        <dl className="facts">
           <div>
             <dt>だれの</dt>
             <dd>{ownerLabel}</dd>
           </div>
           <div>
-            <dt>優先度</dt>
+            <dt>分類</dt>
+            <dd>{category.name}</dd>
+          </div>
+          <div>
+            <dt>大事さ</dt>
             <dd>
-              <Pips value={item.priority} max={3} label="優先度" />
+              <Dots value={item.priority} max={3} label="大事さ" />
             </dd>
           </div>
           {item.place && (
             <div>
               <dt>場所</dt>
-              <dd>{item.place}</dd>
+              <dd className={ink}>{item.place}</dd>
             </div>
           )}
           {item.url && (
             <div>
-              <dt>URL</dt>
+              <dt>リンク</dt>
               <dd className="ellipsis">
                 <a href={item.url} target="_blank" rel="noreferrer">
                   {item.url.replace(/^https?:\/\//, '')}
@@ -77,77 +80,95 @@ export function ItemDetail({ spaceId, item, frameNo, members, categories, onEdit
               </dd>
             </div>
           )}
+          {item.memo && (
+            <div>
+              <dt>メモ</dt>
+              <dd className={'pre ' + ink}>{item.memo}</dd>
+            </div>
+          )}
+          <div>
+            <dt>書いた日</dt>
+            <dd>
+              {creator?.displayName}　{item.createdAt ? formatDate(item.createdAt.toDate()) : ''}
+            </dd>
+          </div>
         </dl>
-        {item.memo && <p className="pre memo">{item.memo}</p>}
-        <p className="byline">
-          <Avatar member={creator} size={18} />
-          {creator?.displayName} — {item.createdAt ? formatDate(item.createdAt.toDate()) : ''}
-        </p>
 
         {item.done && (
           <section className="memory">
-            <header>
-              <span className="kicker">DEVELOPED ON</span>
-              <time>{item.doneAt && formatDate(item.doneAt.toDate(), true)}</time>
-              {item.rating > 0 && <Pips value={item.rating} max={5} label="満足度" />}
-            </header>
+            <h3 className="field-label">思い出</h3>
+            <dl className="facts">
+              <div>
+                <dt>かなえた日</dt>
+                <dd>{item.doneAt && formatDate(item.doneAt.toDate(), true)}</dd>
+              </div>
+              {item.rating > 0 && (
+                <div>
+                  <dt>よかった</dt>
+                  <dd>
+                    <Dots value={item.rating} max={5} label="よかった度" />
+                  </dd>
+                </div>
+              )}
+            </dl>
             {photos.length > 0 && (
-              <div className="contact">
+              <div className="prints">
                 {photos.map((p, i) => (
-                  <button type="button" key={p.id} onClick={() => setViewing(i)} style={{ '--i': i } as CSSProperties}>
+                  <button type="button" key={p.id} onClick={() => setViewing(i)} aria-label={`写真 ${i + 1}`}>
                     <img src={p.data} alt="" />
                   </button>
                 ))}
               </div>
             )}
-            {item.photoIds.length > 0 && photos.length === 0 && <p className="hint">現像中…</p>}
-            {item.doneMemo && <p className="pre hand">{item.doneMemo}</p>}
+            {item.photoIds.length > 0 && photos.length === 0 && <p className="note">写真を出しています…</p>}
+            {item.doneMemo && <p className={'memory-text pre ' + ink}>{item.doneMemo}</p>}
           </section>
         )}
 
-        <div className="actions">
+        <div className="form-actions">
           {item.done ? (
             <>
-              <button className="btn primary" onClick={onComplete}>
-                思い出を編集
+              <button className="link strong" onClick={onComplete}>
+                思い出を書き足す
               </button>
-              <button className="btn" onClick={undo}>
-                「これから」に戻す
+              <button className="link" onClick={undo}>
+                線を消す
               </button>
             </>
           ) : (
-            <button className="btn primary" onClick={onComplete}>
-              達成した
+            <button className="link strong" onClick={onComplete}>
+              かなえた
             </button>
           )}
-          <div className="actions row">
-            <button className="btn" onClick={onEdit}>
-              内容を編集
-            </button>
-            <button className="btn danger" onClick={remove}>
-              削除
-            </button>
-          </div>
+          <button className="link" onClick={onEdit}>
+            書き直す
+          </button>
+          <button className="link quiet" onClick={remove}>
+            捨てる
+          </button>
         </div>
       </div>
 
       {viewing !== null && (
         <div className="viewer" onClick={() => setViewing(null)}>
           <img src={photos[viewing].data} alt="" />
-          <div className="viewer-nav" onClick={(e) => e.stopPropagation()}>
+          <div className="form-actions" onClick={(e) => e.stopPropagation()}>
             {photos.length > 1 && (
-              <button onClick={() => setViewing((viewing + photos.length - 1) % photos.length)} aria-label="前へ">
-                ←
+              <button className="link" onClick={() => setViewing((viewing + photos.length - 1) % photos.length)}>
+                まえ
               </button>
             )}
-            <span>
-              {String(viewing + 1).padStart(2, '0')} / {String(photos.length).padStart(2, '0')}
+            <span className="note">
+              {viewing + 1} / {photos.length}
             </span>
             {photos.length > 1 && (
-              <button onClick={() => setViewing((viewing + 1) % photos.length)} aria-label="次へ">
-                →
+              <button className="link" onClick={() => setViewing((viewing + 1) % photos.length)}>
+                つぎ
               </button>
             )}
+            <button className="link quiet" onClick={() => setViewing(null)}>
+              閉じる
+            </button>
           </div>
         </div>
       )}

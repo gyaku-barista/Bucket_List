@@ -1,25 +1,14 @@
 import type { ReactNode } from 'react'
 
-/** ログイン・初期設定画面の共通レイアウト。縦書きの大きな見出しとフォームを斜めに重ねる */
-export function Composition({ vertical, children }: { vertical: string[]; children: ReactNode }) {
+/** ログイン・はじめの画面。一枚の便箋に書くだけのレイアウト */
+export function Composition({ title, lead, children }: { title: string; lead: string; children: ReactNode }) {
   return (
-    <div className="composition">
-      <div className="crop-marks" aria-hidden>
-        <i />
-        <i />
-        <i />
-        <i />
+    <main className="page">
+      <div className="paper intro">
+        <h1 className="intro-title">{title}</h1>
+        <p className="intro-lead">{lead}</p>
+        {children}
       </div>
-      <h1 className="vertical-title">
-        {vertical.map((line) => (
-          <span key={line}>{line}</span>
-        ))}
-      </h1>
-      <span className="composition-kicker">BUCKET LIST — FOR TWO</span>
-      <div className="composition-panel">{children}</div>
-      <span className="composition-foot" aria-hidden>
-        ISO 400 · 36 EXP
-      </span>
-    </div>
+    </main>
   )
 }

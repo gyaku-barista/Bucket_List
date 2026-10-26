@@ -7,9 +7,9 @@ export function App() {
   const user = useAuthUser()
   const spaceId = useSpaceId(user?.uid)
 
-  if (user === undefined) return <div className="loading">LOADING</div>
+  if (user === undefined) return <div className="page loading">ひらいています…</div>
   if (user === null) return <AuthScreen />
-  if (spaceId === undefined) return <div className="loading">LOADING</div>
+  if (spaceId === undefined) return <div className="page loading">ひらいています…</div>
   if (spaceId === null) return <SetupScreen uid={user.uid} />
   return <MainScreen key={spaceId} uid={user.uid} spaceId={spaceId} />
 }

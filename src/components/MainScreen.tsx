@@ -1,44 +1,73 @@
-import { useMemo, useState, type CSSProperties } from 'react'
-import { findCategory, markOf } from '../categories'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { addItem } from '../data'
+import { findCategory } from '../categories'
 import { useSpace } from '../hooks'
 import type { Item } from '../types'
 import { CompleteForm } from './CompleteForm'
 import { ItemDetail } from './ItemDetail'
 import { ItemForm } from './ItemForm'
 import { Settings } from './Settings'
-import { Avatar, formatDate, OwnerBadge, Pips } from './ui'
+import { Avatar, inkOf, LinkChoice, shortDate } from './ui'
 
 type OwnerTab = 'both' | 'partner' | 'me' | 'all'
-type Sheet = { kind: 'add' } | { kind: 'edit'; id: string } | { kind: 'detail'; id: string } | { kind: 'complete'; id: string } | { kind: 'settings' }
+type Sort = 'new' | 'priority'
+type Sheet = { kind: 'edit'; id: string } | { kind: 'detail'; id: string } | { kind: 'complete'; id: string } | { kind: 'settings' }
 
 const millis = (t: Item['createdAt']) => t?.toMillis() ?? Number.MAX_SAFE_INTEGER
-const pad2 = (n: number) => String(n).padStart(2, '0')
 
-/** プリントごとに少しずつ違う傾き（id から決まるので再描画しても変わらない） */
-function tilt(id: string): number {
-  let h = 0
-  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) | 0
-  return ((Math.abs(h) % 7) - 3) * 0.9
+/**
+ * 新しく増えた行と、新しく線を引いた行だけを動かすための記録。
+ * 最初に読み込んだ分は動かさない。
+ */
+function useFreshIds(items: Item[] | null) {
+  const known = useRef<{ ids: Set<string>; done: Set<string> } | null>(null)
+  const [recent, setRecent] = useState<{ added: Set<string>; struck: Set<string> }>({ added: new Set(), struck: new Set() })
+
+  useEffect(() => {
+    if (!items) return
+    const ids = new Set(items.map((i) => i.id))
+    const done = new Set(items.filter((i) => i.done).map((i) => i.id))
+    const prev = known.current
+    known.current = { ids, done }
+    if (!prev) return
+    const added = [...ids].filter((id) => !prev.ids.has(id))
+    const struck = [...done].filter((id) => !prev.done.has(id))
+    if (!added.length && !struck.length) return
+    setRecent((r) => ({ added: new Set([...r.added, ...added]), struck: new Set([...r.struck, ...struck]) }))
+    const timer = setTimeout(
+      () =>
+        setRecent((r) => ({
+          added: new Set([...r.added].filter((id) => !added.includes(id))),
+          struck: new Set([...r.struck].filter((id) => !struck.includes(id))),
+        })),
+      2000,
+    )
+    return () => clearTimeout(timer)
+  }, [items])
+
+  // effect が走る前の最初の描画でも動きが始まるよう、記録にない id もその場で新しいとみなす
+  return {
+    isAdded: (item: Item) => (known.current !== null && !known.current.ids.has(item.id)) || recent.added.has(item.id),
+    isStruck: (item: Item) => (known.current !== null && item.done && !known.current.done.has(item.id)) || recent.struck.has(item.id),
+  }
 }
 
 export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
   const { space, members, items } = useSpace(spaceId)
   const [ownerTab, setOwnerTab] = useState<OwnerTab>('both')
-  const [showDone, setShowDone] = useState(false)
-  const [category, setCategory] = useState<string | null>(null)
+  const [category, setCategory] = useState<string>('all')
+  const [showCategories, setShowCategories] = useState(false)
+  const [sort, setSort] = useState<Sort>('new')
+  const [searching, setSearching] = useState(false)
   const [keyword, setKeyword] = useState('')
-  const [sort, setSort] = useState<'new' | 'priority'>('new')
+  const [draft, setDraft] = useState('')
   const [sheet, setSheet] = useState<Sheet | null>(null)
   const [picked, setPicked] = useState<Item | null>(null)
+  const fresh = useFreshIds(items)
 
   const me = members.find((m) => m.uid === uid)
   const partner = members.find((m) => m.uid !== uid)
-
-  // 追加した順のコマ番号（フィルムの No. のように固定）
-  const frameNo = useMemo(() => {
-    const sorted = [...(items ?? [])].sort((a, b) => millis(a.createdAt) - millis(b.createdAt))
-    return new Map(sorted.map((item, i) => [item.id, i + 1]))
-  }, [items])
+  const memberOrder = space?.members ?? []
 
   const byOwner = useMemo(() => {
     const all = items ?? []
@@ -54,238 +83,222 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
     }
   }, [items, ownerTab, uid])
 
-  const visible = useMemo(() => {
+  const { open, done } = useMemo(() => {
     const kw = keyword.trim().toLowerCase()
     const list = byOwner.filter(
-      (i) =>
-        i.done === showDone &&
-        (!category || i.category === category) &&
-        (!kw || [i.title, i.memo, i.place, i.doneMemo].some((s) => s.toLowerCase().includes(kw))),
+      (i) => (category === 'all' || i.category === category) && (!kw || [i.title, i.memo, i.place, i.doneMemo].some((s) => s.toLowerCase().includes(kw))),
     )
-    if (showDone) return list.sort((a, b) => millis(b.doneAt) - millis(a.doneAt))
-    if (sort === 'priority') return list.sort((a, b) => b.priority - a.priority || millis(b.createdAt) - millis(a.createdAt))
-    return list
-  }, [byOwner, showDone, category, keyword, sort])
+    const open = list.filter((i) => !i.done)
+    if (sort === 'priority') open.sort((a, b) => b.priority - a.priority || millis(b.createdAt) - millis(a.createdAt))
+    const done = list.filter((i) => i.done).sort((a, b) => millis(b.doneAt) - millis(a.doneAt))
+    return { open, done }
+  }, [byOwner, category, keyword, sort])
 
-  if (!space || !items) return <div className="loading">LOADING</div>
+  // 今日の一枚の写真は、いちばん最近の思い出から
+  const cornerPhoto = useMemo(
+    () => (items ?? []).filter((i) => i.done && i.thumb).sort((a, b) => millis(b.doneAt) - millis(a.doneAt))[0]?.thumb ?? null,
+    [items],
+  )
 
-  const doneCount = byOwner.filter((i) => i.done).length
-  const rate = byOwner.length ? Math.round((doneCount / byOwner.length) * 100) : 0
-  const strip = [...byOwner].sort((a, b) => millis(a.createdAt) - millis(b.createdAt))
+  if (!space || !items) return <div className="page loading">ひらいています…</div>
+
   const sheetItem = sheet && 'id' in sheet ? items.find((i) => i.id === sheet.id) : undefined
+  const categoryName = category === 'all' ? 'すべて' : findCategory(space.categories, category).name
 
-  const pickRandom = () => {
-    const candidates = byOwner.filter((i) => !i.done && (!category || i.category === category))
-    if (!candidates.length) return alert('まだ「これから」のやりたいことがありません')
-    setPicked(candidates[Math.floor(Math.random() * candidates.length)])
+  const write = (e: FormEvent) => {
+    e.preventDefault()
+    const title = draft.trim()
+    if (!title) return
+    addItem(spaceId, uid, {
+      title,
+      owner: ownerTab === 'me' ? uid : ownerTab === 'partner' && partner ? partner.uid : 'both',
+      category: category === 'all' ? 'other' : category,
+      memo: '',
+      place: '',
+      url: '',
+      priority: 2,
+    }).catch((err) => alert('書き込めませんでした: ' + err))
+    setDraft('')
   }
 
-  const tabs: { key: OwnerTab; label: string }[] = [
-    { key: 'both', label: 'ふたりで' },
-    { key: 'partner', label: partner?.displayName ?? '相手' },
-    { key: 'me', label: me?.displayName ?? '自分' },
-    { key: 'all', label: 'すべて' },
-  ]
+  const pickRandom = () => {
+    const candidates = byOwner.filter((i) => !i.done)
+    if (!candidates.length) return alert('まだ、これからのことが書かれていません')
+    let next = candidates[Math.floor(Math.random() * candidates.length)]
+    if (candidates.length > 1 && next.id === picked?.id) next = candidates.find((i) => i.id !== picked.id)!
+    setPicked(next)
+  }
+
+  const toggleSearch = () => {
+    if (searching) setKeyword('')
+    setSearching(!searching)
+  }
 
   return (
-    <div className="app">
-      <header className="masthead">
-        <span className="kicker">BUCKET LIST · VOL.{new Date().getFullYear()}</span>
-        <button className="text-btn" onClick={() => setSheet({ kind: 'settings' })}>
-          設定
+    <main className="page">
+      <div className="paper sheet-main">
+        <button className="corner-photo" onClick={pickRandom} aria-label="今日の一枚（やりたいことをひとつ選ぶ）">
+          <span className="tape" aria-hidden />
+          <span className="corner-photo-frame">{cornerPhoto && <img src={cornerPhoto} alt="" />}</span>
+          <span className="corner-photo-caption">今日の一枚</span>
         </button>
-        <div className="duo">
-          <span className="avatar-pair">
-            <Avatar member={me} size={38} />
-            {partner && <Avatar member={partner} size={38} />}
-          </span>
-          <span className="duo-names">
-            {me?.displayName}
-            {partner && (
-              <>
-                <em>&amp;</em>
-                {partner.displayName}
-              </>
-            )}
-          </span>
-        </div>
-      </header>
 
-      {!partner && (
-        <button className="tape" onClick={() => setSheet({ kind: 'settings' })}>
-          <span>INVITE</span>
-          <b>{space.inviteCode}</b>
-          <span>このコードを相手に送ってください</span>
-        </button>
-      )}
-
-      <section className="counter" aria-label={`達成 ${doneCount} / ${byOwner.length}`}>
-        <span className="counter-num">{pad2(doneCount)}</span>
-        <div className="counter-side">
-          <span className="counter-den">/ {pad2(byOwner.length)}</span>
-          <span className="counter-label">DEVELOPED — {rate}%</span>
-        </div>
-        <div className="filmstrip" aria-hidden>
-          {strip.map((i) => (
-            <i key={i.id} className={i.done ? 'lit' : ''} />
-          ))}
-          {strip.length === 0 && <i />}
-        </div>
-      </section>
-
-      <nav className="owners">
-        {tabs.map((t) => (
-          <button key={t.key} className={ownerTab === t.key ? 'active' : ''} onClick={() => setOwnerTab(t.key)}>
-            {t.label}
-          </button>
-        ))}
-      </nav>
-
-      <div className="modes">
-        <button className={!showDone ? 'active' : ''} onClick={() => setShowDone(false)}>
-          <span>これから</span>
-          <small>LATENT</small>
-        </button>
-        <button className={showDone ? 'active' : ''} onClick={() => setShowDone(true)}>
-          <span>思い出</span>
-          <small>DEVELOPED</small>
-        </button>
-        {!showDone && (
-          <select value={sort} onChange={(e) => setSort(e.target.value as 'new' | 'priority')} aria-label="並び順">
-            <option value="new">新しい順</option>
-            <option value="priority">優先度順</option>
-          </select>
-        )}
-      </div>
-
-      <div className="filters">
-        <input className="search" type="search" placeholder="SEARCH —" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
-        <div className="chips scroll">
-          <button className={'chip' + (!category ? ' active' : '')} onClick={() => setCategory(null)}>
-            すべて
-          </button>
-          {space.categories.map((c) => (
-            <button key={c.id} className={'chip' + (category === c.id ? ' active' : '')} onClick={() => setCategory(category === c.id ? null : c.id)}>
-              <span className="chip-mark">{markOf(c)}</span>
-              {c.name}
+        <header className="row head">
+          <h1 className="title">ふたりのやりたいこと</h1>
+          <span className="head-links">
+            <button className={'link' + (searching ? ' current' : '')} onClick={toggleSearch}>
+              さがす
             </button>
-          ))}
-        </div>
-      </div>
+            <button className="link" onClick={() => setSheet({ kind: 'settings' })}>
+              設定
+            </button>
+          </span>
+        </header>
 
-      {showDone ? (
-        <ul className="prints">
-          {visible.map((item, i) => {
-            const c = findCategory(space.categories, item.category)
-            return (
-              <li key={item.id} style={{ '--i': i, '--tilt': `${tilt(item.id)}deg` } as CSSProperties}>
-                <button className="print" onClick={() => setSheet({ kind: 'detail', id: item.id })}>
-                  {item.thumb ? (
-                    <img src={item.thumb} alt="" />
-                  ) : (
-                    <span className="print-blank">
-                      <span>{markOf(c)}</span>
-                    </span>
-                  )}
-                  <span className="print-caption">{item.title}</span>
-                  <span className="print-date">{item.doneAt ? formatDate(item.doneAt.toDate()) : ''}</span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      ) : (
-        <ol className="negatives">
-          {visible.map((item, i) => {
-            const c = findCategory(space.categories, item.category)
-            return (
-              <li key={item.id} style={{ '--i': i } as CSSProperties}>
-                <button className="neg" onClick={() => setSheet({ kind: 'detail', id: item.id })}>
-                  <span className="neg-no">No.{pad2(frameNo.get(item.id) ?? 0)}</span>
-                  <span className="neg-mark" aria-hidden>
-                    {markOf(c)}
-                  </span>
-                  <span className="neg-title">{item.title}</span>
-                  <span className="neg-meta">
-                    {c.name}
-                    {item.place && <> / {item.place}</>}
-                  </span>
-                  <span className="neg-side">
-                    <OwnerBadge owner={item.owner} members={members} />
-                    <Pips value={item.priority} max={3} label="優先度" />
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-        </ol>
-      )}
-      {visible.length === 0 && (
-        <p className="empty">
-          {showDone ? (
+        <p className="row names">
+          <span className={'name ' + inkOf(me?.uid, memberOrder)}>
+            <Avatar member={me} size={20} />
+            {me?.displayName}
+          </span>
+          {partner && (
             <>
-              まだ現像された思い出はありません。
-              <br />
-              最初の一枚を、ふたりで。
-            </>
-          ) : (
-            <>
-              右下の ＋ から、
-              <br />
-              やりたいことを一つ書いてみましょう。
+              <span className="and">と</span>
+              <span className={'name ' + inkOf(partner.uid, memberOrder)}>
+                <Avatar member={partner} size={20} />
+                {partner.displayName}
+              </span>
             </>
           )}
         </p>
-      )}
 
-      <div className="fab-area">
-        {!showDone && (
-          <button className="fab-ghost" onClick={pickRandom}>
-            今日の一枚
-          </button>
+        <nav className="row controls" aria-label="だれの">
+          <LinkChoice
+            options={[
+              { value: 'both', label: 'ふたりで' },
+              { value: 'partner', label: partner?.displayName ?? '相手' },
+              { value: 'me', label: me?.displayName ?? '自分' },
+              { value: 'all', label: 'すべて' },
+            ]}
+            value={ownerTab}
+            onChange={setOwnerTab}
+          />
+        </nav>
+
+        <div className="row controls">
+          <span className="control">
+            分類
+            <button className={'link' + (showCategories ? ' current' : '')} onClick={() => setShowCategories(!showCategories)} aria-expanded={showCategories}>
+              {categoryName}
+            </button>
+          </span>
+          <span className="control">
+            並び
+            <button className="link" onClick={() => setSort(sort === 'new' ? 'priority' : 'new')}>
+              {sort === 'new' ? '新しい順' : '大事な順'}
+            </button>
+          </span>
+        </div>
+
+        {showCategories && (
+          <div className="rows controls category-links">
+            <LinkChoice
+              options={[{ value: 'all', label: 'すべて' }, ...space.categories.map((c) => ({ value: c.id, label: c.name }))]}
+              value={category}
+              onChange={(v) => {
+                setCategory(v)
+                setShowCategories(false)
+              }}
+            />
+          </div>
         )}
-        <button className="shutter" onClick={() => setSheet({ kind: 'add' })} aria-label="追加">
-          <span>＋</span>
-        </button>
+
+        {searching && (
+          <div className="row search">
+            <input type="search" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="ことばを入れてさがす" aria-label="さがす" autoFocus />
+          </div>
+        )}
+
+        <p className="row tally">
+          これから {open.length}　・　かなえた {done.length}
+        </p>
+
+        <ol className="lines">
+          {open.map((item, i) => (
+            <li key={item.id} className={fresh.isAdded(item) ? 'appear' : undefined}>
+              <button className="line" onClick={() => setSheet({ kind: 'detail', id: item.id })}>
+                <span className="line-no">{i + 1}</span>
+                <span className={'line-text ' + inkOf(item.createdBy, memberOrder)}>{item.title}</span>
+                <span className="line-date">{item.createdAt && shortDate(item.createdAt.toDate())}</span>
+              </button>
+            </li>
+          ))}
+          {!keyword && (
+            <li className="write-line">
+              <form className="line" onSubmit={write}>
+                <span className="line-no">{open.length + 1}</span>
+                <input
+                  className={'line-text ' + inkOf(uid, memberOrder)}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder="ここに書き足す"
+                  maxLength={100}
+                  enterKeyHint="done"
+                  aria-label="やりたいことを書き足す"
+                />
+                {draft.trim() && <button className="link strong line-date">書く</button>}
+              </form>
+            </li>
+          )}
+        </ol>
+
+        {done.length > 0 && (
+          <>
+            <p className="row tally">かなえたこと</p>
+            <ol className="lines done-lines">
+              {done.map((item, i) => (
+                <li key={item.id}>
+                  <button className="line" onClick={() => setSheet({ kind: 'detail', id: item.id })}>
+                    <span className="line-no">{open.length + i + 1}</span>
+                    <span className={'line-text ' + inkOf(item.createdBy, memberOrder)}>
+                      <s className={fresh.isStruck(item) ? 'strike drawing' : 'strike'}>{item.title}</s>
+                    </span>
+                    <span className="line-date">{item.doneAt && shortDate(item.doneAt.toDate())}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
+
+        {keyword && open.length + done.length === 0 && <p className="row tally">見つかりませんでした</p>}
       </div>
 
       {picked && (
         <div className="sheet-backdrop center" onClick={() => setPicked(null)}>
-          <div className="pick" onClick={(e) => e.stopPropagation()}>
-            <span className="kicker">TODAY'S FRAME</span>
-            <div className="pick-mark">{markOf(findCategory(space.categories, picked.category))}</div>
-            <h3>{picked.title}</h3>
-            <div className="actions row">
+          <div className="slip paper" role="dialog" aria-label="今日の一枚" onClick={(e) => e.stopPropagation()}>
+            <p className="slip-lead">今日は、これはどうでしょう</p>
+            <p className={'slip-text ' + inkOf(picked.createdBy, memberOrder)}>{picked.title}</p>
+            <div className="form-actions">
               <button
-                className="btn primary"
+                className="link strong"
                 onClick={() => {
                   setSheet({ kind: 'detail', id: picked.id })
                   setPicked(null)
                 }}
               >
-                詳しく見る
+                くわしく
               </button>
-              <button className="btn" onClick={pickRandom}>
-                もう一回
+              <button className="link" onClick={pickRandom}>
+                ほかのを
+              </button>
+              <button className="link quiet" onClick={() => setPicked(null)}>
+                閉じる
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {sheet?.kind === 'add' && (
-        <ItemForm
-          spaceId={spaceId}
-          uid={uid}
-          members={members}
-          categories={space.categories}
-          defaults={{
-            owner: ownerTab === 'me' ? uid : ownerTab === 'partner' && partner ? partner.uid : 'both',
-            category: category ?? undefined,
-          }}
-          onClose={() => setSheet(null)}
-        />
-      )}
       {sheet?.kind === 'edit' && sheetItem && (
         <ItemForm
           spaceId={spaceId}
@@ -300,8 +313,8 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
         <ItemDetail
           spaceId={spaceId}
           item={sheetItem}
-          frameNo={frameNo.get(sheetItem.id) ?? 0}
           members={members}
+          memberOrder={memberOrder}
           categories={space.categories}
           onEdit={() => setSheet({ kind: 'edit', id: sheetItem.id })}
           onComplete={() => setSheet({ kind: 'complete', id: sheetItem.id })}
@@ -309,9 +322,14 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
         />
       )}
       {sheet?.kind === 'complete' && sheetItem && (
-        <CompleteForm spaceId={spaceId} item={sheetItem} onClose={() => setSheet({ kind: 'detail', id: sheetItem.id })} />
+        <CompleteForm
+          spaceId={spaceId}
+          item={sheetItem}
+          // はじめてかなえたときは紙に戻り、線を引くところを見せる
+          onClose={(saved) => setSheet(saved && !sheetItem.done ? null : { kind: 'detail', id: sheetItem.id })}
+        />
       )}
       {sheet?.kind === 'settings' && <Settings space={space} uid={uid} members={members} items={items} onClose={() => setSheet(null)} />}
-    </div>
+    </main>
   )
 }

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../firebase'
 import { Composition } from './Composition'
+import { LinkChoice } from './ui'
 
 const ERRORS: Record<string, string> = {
   'auth/invalid-credential': 'メールアドレスかパスワードが違います',
@@ -44,15 +45,15 @@ export function AuthScreen() {
   }
 
   return (
-    <Composition vertical={['ふたりで、', 'やりたいこと。']}>
-      <div className="line-tabs">
-        <button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>
-          ログイン
-        </button>
-        <button className={mode === 'signup' ? 'active' : ''} onClick={() => setMode('signup')}>
-          新規登録
-        </button>
-      </div>
+    <Composition title="ふたりのやりたいこと" lead="ふたりでしたいこと、それぞれしたいことを、一枚の紙に書きためていく帳面です。">
+      <LinkChoice
+        options={[
+          { value: 'login', label: 'ログイン' },
+          { value: 'signup', label: 'はじめて使う' },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
       <form onSubmit={submit} className="form">
         <label>
           <span className="field-label">メールアドレス</span>
@@ -69,15 +70,17 @@ export function AuthScreen() {
             required
           />
         </label>
-        {message && <p className="message">{message}</p>}
-        <button className="btn primary" disabled={busy}>
-          {mode === 'login' ? 'ログイン' : '登録する'}
-        </button>
-        {mode === 'login' && (
-          <button type="button" className="link-btn" onClick={reset}>
-            パスワードを忘れた
+        {message && <p className="note">{message}</p>}
+        <div className="form-actions">
+          <button className="link strong" disabled={busy}>
+            {mode === 'login' ? 'ひらく' : '登録する'}
           </button>
-        )}
+          {mode === 'login' && (
+            <button type="button" className="link quiet" onClick={reset}>
+              パスワードを忘れた
+            </button>
+          )}
+        </div>
       </form>
     </Composition>
   )

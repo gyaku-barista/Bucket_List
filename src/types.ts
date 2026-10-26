@@ -3,9 +3,8 @@ import type { Timestamp } from 'firebase/firestore'
 export interface Category {
   id: string
   name: string
-  /** 表示用の一文字（未設定なら名前の一文字目） */
+  /** 旧バージョンで保存された印。表示には使わない */
   mark?: string
-  /** 旧バージョンの絵文字。表示には使わない */
   emoji?: string
 }
 

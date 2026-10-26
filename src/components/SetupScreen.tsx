@@ -3,6 +3,7 @@ import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { createSpace, joinSpace } from '../data'
 import { Composition } from './Composition'
+import { LinkChoice } from './ui'
 
 export function SetupScreen({ uid }: { uid: string }) {
   const [displayName, setDisplayName] = useState('')
@@ -25,22 +26,22 @@ export function SetupScreen({ uid }: { uid: string }) {
   }
 
   return (
-    <Composition vertical={['一本目の', 'フィルムを。']}>
+    <Composition title="はじめに" lead="あなたの名前を書いてください。ふたりの紙を新しく用意するか、相手から届いた招待コードで同じ紙に参加します。">
       <form onSubmit={submit} className="form">
         <label>
-          <span className="field-label">あなたの表示名</span>
+          <span className="field-label">あなたの名前</span>
           <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={20} required />
         </label>
-        <div className="line-tabs">
-          <button type="button" className={mode === 'create' ? 'active' : ''} onClick={() => setMode('create')}>
-            リストを作る
-          </button>
-          <button type="button" className={mode === 'join' ? 'active' : ''} onClick={() => setMode('join')}>
-            コードで参加
-          </button>
-        </div>
+        <LinkChoice
+          options={[
+            { value: 'create', label: '新しく紙を用意する' },
+            { value: 'join', label: '招待コードで参加する' },
+          ]}
+          value={mode}
+          onChange={setMode}
+        />
         {mode === 'create' ? (
-          <p className="hint">作成後に表示される招待コードを、相手に送ってください。</p>
+          <p className="note">用意したあと、設定に書いてある招待コードを相手に送ってください。</p>
         ) : (
           <label>
             <span className="field-label">招待コード</span>
@@ -54,13 +55,15 @@ export function SetupScreen({ uid }: { uid: string }) {
             />
           </label>
         )}
-        {message && <p className="message">{message}</p>}
-        <button className="btn primary" disabled={busy}>
-          {mode === 'create' ? '作成する' : '参加する'}
-        </button>
-        <button type="button" className="link-btn" onClick={() => signOut(auth)}>
-          ログアウト
-        </button>
+        {message && <p className="note">{message}</p>}
+        <div className="form-actions">
+          <button className="link strong" disabled={busy}>
+            {mode === 'create' ? '用意する' : '参加する'}
+          </button>
+          <button type="button" className="link quiet" onClick={() => signOut(auth)}>
+            ログアウト
+          </button>
+        </div>
       </form>
     </Composition>
   )

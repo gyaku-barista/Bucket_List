@@ -1,30 +1,28 @@
 import { useState, type FormEvent } from 'react'
-import { markOf } from '../categories'
-import { addItem, updateItem, type ItemInput } from '../data'
+import { updateItem, type ItemInput } from '../data'
 import type { Category, Item, Member } from '../types'
-import { Pips, Sheet } from './ui'
+import { Dots, LinkChoice, Sheet } from './ui'
 
 interface Props {
   spaceId: string
   uid: string
   members: Member[]
   categories: Category[]
-  item?: Item
-  defaults?: Partial<ItemInput>
+  item: Item
   onClose: () => void
 }
 
-export function ItemForm({ spaceId, uid, members, categories, item, defaults, onClose }: Props) {
+/** 書いた項目を書き直す（追加はリストの空いた行から） */
+export function ItemForm({ spaceId, uid, members, categories, item, onClose }: Props) {
   const [form, setForm] = useState<ItemInput>({
-    title: item?.title ?? '',
-    owner: item?.owner ?? defaults?.owner ?? 'both',
-    category: item?.category ?? defaults?.category ?? categories[0]?.id ?? 'other',
-    memo: item?.memo ?? '',
-    place: item?.place ?? '',
-    url: item?.url ?? '',
-    priority: item?.priority ?? 2,
+    title: item.title,
+    owner: item.owner,
+    category: item.category,
+    memo: item.memo,
+    place: item.place,
+    url: item.url,
+    priority: item.priority,
   })
-  const [busy, setBusy] = useState(false)
   const set = <K extends keyof ItemInput>(key: K, value: ItemInput[K]) => setForm((f) => ({ ...f, [key]: value }))
 
   const me = members.find((m) => m.uid === uid)
@@ -35,68 +33,52 @@ export function ItemForm({ spaceId, uid, members, categories, item, defaults, on
     ...(partner ? [{ value: partner.uid, label: partner.displayName }] : []),
   ]
 
-  const submit = async (e: FormEvent) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault()
-    setBusy(true)
-    const data = { ...form, title: form.title.trim(), url: form.url.trim() }
     // オフライン時は書き込み完了を待つと閉じられないので、結果を待たずに閉じる
-    const pending = item ? updateItem(spaceId, item.id, data) : addItem(spaceId, uid, data)
-    pending.catch((err) => alert('保存に失敗しました: ' + err))
+    updateItem(spaceId, item.id, { ...form, title: form.title.trim(), url: form.url.trim() }).catch((err) => alert('書き込めませんでした: ' + err))
     onClose()
   }
 
   return (
-    <Sheet kicker={item ? 'EDIT' : 'NEW FRAME'} title={item ? '内容を編集' : 'やりたいことを追加'} onClose={onClose}>
+    <Sheet title="書き直す" onClose={onClose}>
       <form className="form" onSubmit={submit}>
         <label>
           <span className="field-label">やりたいこと</span>
-          <input className="title-input" value={form.title} onChange={(e) => set('title', e.target.value)} maxLength={100} required autoFocus={!item} />
+          <input className="hand-input" value={form.title} onChange={(e) => set('title', e.target.value)} maxLength={100} required />
         </label>
 
-        <fieldset>
-          <legend className="field-label">だれの</legend>
-          <div className="line-tabs">
-            {owners.map((o) => (
-              <button type="button" key={o.value} className={form.owner === o.value ? 'active' : ''} onClick={() => set('owner', o.value)}>
-                {o.label}
-              </button>
-            ))}
-          </div>
-        </fieldset>
+        <div className="field">
+          <span className="field-label">だれの</span>
+          <LinkChoice options={owners} value={form.owner} onChange={(v) => set('owner', v)} />
+        </div>
 
-        <fieldset>
-          <legend className="field-label">カテゴリ</legend>
-          <div className="mark-grid">
-            {categories.map((c) => (
-              <button type="button" key={c.id} className={form.category === c.id ? 'active' : ''} onClick={() => set('category', c.id)}>
-                <span className="mark-glyph">{markOf(c)}</span>
-                <span className="mark-name">{c.name}</span>
-              </button>
-            ))}
-          </div>
-        </fieldset>
+        <div className="field">
+          <span className="field-label">分類</span>
+          <LinkChoice options={categories.map((c) => ({ value: c.id, label: c.name }))} value={form.category} onChange={(v) => set('category', v)} />
+        </div>
 
-        <fieldset>
-          <legend className="field-label">優先度</legend>
-          <Pips value={form.priority} max={3} onChange={(v) => set('priority', v || 1)} label="優先度" />
-        </fieldset>
+        <div className="field">
+          <span className="field-label">大事さ</span>
+          <Dots value={form.priority} max={3} onChange={(v) => set('priority', v || 1)} label="大事さ" />
+        </div>
 
         <label>
           <span className="field-label">場所</span>
-          <input value={form.place} onChange={(e) => set('place', e.target.value)} maxLength={100} />
+          <input className="hand-input" value={form.place} onChange={(e) => set('place', e.target.value)} maxLength={100} />
         </label>
         <label>
-          <span className="field-label">URL</span>
-          <input type="url" inputMode="url" value={form.url} onChange={(e) => set('url', e.target.value)} placeholder="https://" />
+          <span className="field-label">リンク</span>
+          <input type="url" inputMode="url" value={form.url} onChange={(e) => set('url', e.target.value)} />
         </label>
         <label>
           <span className="field-label">メモ</span>
-          <textarea rows={3} value={form.memo} onChange={(e) => set('memo', e.target.value)} maxLength={2000} />
+          <textarea className="hand-input" rows={3} value={form.memo} onChange={(e) => set('memo', e.target.value)} maxLength={2000} />
         </label>
 
-        <button className="btn primary" disabled={busy}>
-          保存
-        </button>
+        <div className="form-actions">
+          <button className="link strong">これで書く</button>
+        </div>
       </form>
     </Sheet>
   )

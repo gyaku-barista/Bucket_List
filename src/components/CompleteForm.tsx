@@ -2,11 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { fetchPhotos, saveCompletion } from '../data'
 import { compressImage, squareThumb } from '../image'
 import type { Item, Photo } from '../types'
-import { Pips, Sheet, toLocalInput } from './ui'
+import { Dots, Sheet, toLocalInput } from './ui'
 
 const MAX_PHOTOS = 10
 
-export function CompleteForm({ spaceId, item, onClose }: { spaceId: string; item: Item; onClose: () => void }) {
+export function CompleteForm({ spaceId, item, onClose }: { spaceId: string; item: Item; onClose: (saved: boolean) => void }) {
   const [doneAt, setDoneAt] = useState(toLocalInput(item.doneAt?.toDate() ?? new Date()))
   const [doneMemo, setDoneMemo] = useState(item.doneMemo)
   const [rating, setRating] = useState(item.rating)
@@ -56,62 +56,68 @@ export function CompleteForm({ spaceId, item, onClose }: { spaceId: string; item
       newPhotos: added,
       thumb,
     })
-    pending.catch((err) => alert('保存に失敗しました: ' + err))
-    onClose()
+    pending.catch((err) => alert('書き込めませんでした: ' + err))
+    onClose(true)
   }
 
   return (
-    <Sheet kicker="DEVELOP" title={item.done ? '思い出を編集' : '達成を記録'} onClose={onClose}>
+    <Sheet title={item.done ? '思い出を書き足す' : 'かなえた'} onClose={() => onClose(false)}>
       <form className="form" onSubmit={submit}>
         <p className="complete-title">{item.title}</p>
         <label>
-          <span className="field-label">達成した日時</span>
-          <input type="datetime-local" value={doneAt} onChange={(e) => setDoneAt(e.target.value)} required />
+          <span className="field-label">かなえた日</span>
+          <input className="date-input" type="datetime-local" value={doneAt} onChange={(e) => setDoneAt(e.target.value)} required />
         </label>
 
-        <fieldset>
-          <legend className="field-label">満足度</legend>
-          <Pips value={rating} max={5} onChange={setRating} label="満足度" />
-        </fieldset>
+        <div className="field">
+          <span className="field-label">よかった度</span>
+          <Dots value={rating} max={5} onChange={setRating} label="よかった度" />
+        </div>
 
-        <fieldset>
-          <legend className="field-label">
-            写真 {total}/{MAX_PHOTOS}
-          </legend>
-          <div className="photo-grid">
+        <div className="field">
+          <span className="field-label">
+            写真（{total}/{MAX_PHOTOS}枚）
+          </span>
+          <div className="prints">
             {existing.map((p) => (
-              <div className="photo-cell" key={p.id}>
-                <img src={p.data} alt="" />
-                <button type="button" className="photo-remove" onClick={() => setExisting((x) => x.filter((y) => y.id !== p.id))} aria-label="削除">
-                  ×
+              <div className="print-edit" key={p.id}>
+                <span className="print-frame">
+                  <img src={p.data} alt="" />
+                </span>
+                <button type="button" className="link quiet" onClick={() => setExisting((x) => x.filter((y) => y.id !== p.id))}>
+                  はずす
                 </button>
               </div>
             ))}
             {added.map((data, i) => (
-              <div className="photo-cell" key={'new' + i}>
-                <img src={data} alt="" />
-                <button type="button" className="photo-remove" onClick={() => setAdded((x) => x.filter((_, j) => j !== i))} aria-label="削除">
-                  ×
+              <div className="print-edit" key={'new' + i}>
+                <span className="print-frame">
+                  <img src={data} alt="" />
+                </span>
+                <button type="button" className="link quiet" onClick={() => setAdded((x) => x.filter((_, j) => j !== i))}>
+                  はずす
                 </button>
               </div>
             ))}
-            {total < MAX_PHOTOS && (
-              <label className="photo-cell photo-add">
-                {processing ? '…' : '＋'}
-                <input type="file" accept="image/*" multiple hidden onChange={(e) => addFiles(e.target.files)} />
-              </label>
-            )}
           </div>
-        </fieldset>
+          {total < MAX_PHOTOS && (
+            <label className="link add-photo">
+              {processing ? '写真を読み込んでいます…' : '写真を貼る'}
+              <input type="file" accept="image/*" multiple hidden onChange={(e) => addFiles(e.target.files)} />
+            </label>
+          )}
+        </div>
 
         <label>
-          <span className="field-label">メモ・感想</span>
-          <textarea className="hand" rows={4} value={doneMemo} onChange={(e) => setDoneMemo(e.target.value)} maxLength={5000} />
+          <span className="field-label">思い出のことば</span>
+          <textarea className="hand-input ruled" rows={4} value={doneMemo} onChange={(e) => setDoneMemo(e.target.value)} maxLength={5000} />
         </label>
 
-        <button className="btn primary" disabled={busy || processing || !loaded}>
-          保存
-        </button>
+        <div className="form-actions">
+          <button className="link strong" disabled={busy || processing || !loaded}>
+            これで残す
+          </button>
+        </div>
       </form>
     </Sheet>
   )
