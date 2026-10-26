@@ -1,10 +1,15 @@
 import { useEffect, type ReactNode } from 'react'
 import type { Member } from '../types'
 
-/** 写真を選んだ人だけ、小さな丸い写真を添える */
-export function Avatar({ member, size = 22 }: { member: Member | undefined; size?: number }) {
-  if (!member?.avatar) return null
-  return <img className="avatar" src={member.avatar} alt="" style={{ width: size, height: size }} />
+/** 写真があれば写真、なければ名前の一文字目を書いた人のインクで */
+export function Avatar({ member, ink, size = 28 }: { member: Member | undefined; ink?: string; size?: number }) {
+  const style = { width: size, height: size, fontSize: size * 0.46 }
+  if (member?.avatar) return <img className="avatar" src={member.avatar} alt="" style={style} />
+  return (
+    <span className={'avatar avatar-text ' + (ink ?? '')} style={style} aria-hidden>
+      {member?.displayName ? Array.from(member.displayName)[0] : ''}
+    </span>
+  )
 }
 
 /**
@@ -14,7 +19,31 @@ export function inkOf(uid: string | undefined, memberOrder: string[]): string {
   return memberOrder.indexOf(uid ?? '') === 1 ? 'ink-b' : 'ink-a'
 }
 
-/** 下から重ねるもう一枚の紙 */
+const ICONS = {
+  search: <path d="M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13ZM15.5 15.5 20 20" />,
+  settings: (
+    <>
+      <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="10" cy="17" r="2" />
+    </>
+  ),
+  close: <path d="M6 6l12 12M18 6 6 18" />,
+  plus: <path d="M12 5v14M5 12h14" />,
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  chevron: <path d="m9 6 6 6-6 6" />,
+  sort: <path d="M7 5v14M4 8l3-3 3 3M17 19V5M14 16l3 3 3-3" />,
+}
+
+export function Icon({ name, size = 22 }: { name: keyof typeof ICONS; size?: number }) {
+  return (
+    <svg className="icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {ICONS[name]}
+    </svg>
+  )
+}
+
+/** 下から出てくる紙 */
 export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   useEffect(() => {
     const prev = document.body.style.overflow
@@ -25,11 +54,12 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
   }, [])
   return (
     <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet paper" role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()}>
+      <div className="sheet" role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-handle" aria-hidden />
         <header className="sheet-header">
           <h2>{title}</h2>
-          <button className="link" onClick={onClose}>
-            閉じる
+          <button className="icon-btn" onClick={onClose} aria-label="閉じる">
+            <Icon name="close" />
           </button>
         </header>
         <div className="sheet-body">{children}</div>
@@ -38,7 +68,7 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
   )
 }
 
-/** 大事さ・満足度。小さな丸を塗る */
+/** 大事さ・よかった度。小さな丸を塗る */
 export function Dots({ value, max, onChange, label }: { value: number; max: number; onChange?: (v: number) => void; label: string }) {
   if (!onChange) {
     return (
@@ -68,24 +98,49 @@ export function Dots({ value, max, onChange, label }: { value: number; max: numb
   )
 }
 
-/** 小さな文字のリンクを「・」で区切って並べる選択 */
-export function LinkChoice<T extends string>({
+/** 横いっぱいの切り替え */
+export function Segmented<T extends string>({
   options,
   value,
   onChange,
+  label,
 }: {
   options: { value: T; label: string }[]
   value: T
   onChange: (v: T) => void
+  label: string
 }) {
   return (
-    <span className="link-choice">
+    <div className="segmented" role="tablist" aria-label={label}>
       {options.map((o) => (
-        <button type="button" key={o.value} className={'link' + (o.value === value ? ' current' : '')} aria-pressed={o.value === value} onClick={() => onChange(o.value)}>
+        <button type="button" key={o.value} role="tab" aria-selected={o.value === value} className={o.value === value ? 'active' : ''} onClick={() => onChange(o.value)}>
           {o.label}
         </button>
       ))}
-    </span>
+    </div>
+  )
+}
+
+/** 小さな札を並べた選択 */
+export function Chips<T extends string>({
+  options,
+  value,
+  onChange,
+  scroll,
+}: {
+  options: { value: T; label: string }[]
+  value: T
+  onChange: (v: T) => void
+  scroll?: boolean
+}) {
+  return (
+    <div className={'chips' + (scroll ? ' scroll' : '')}>
+      {options.map((o) => (
+        <button type="button" key={o.value} aria-pressed={o.value === value} className={'chip' + (o.value === value ? ' active' : '')} onClick={() => onChange(o.value)}>
+          {o.label}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -97,10 +152,10 @@ export function formatDate(d: Date, withTime = false): string {
   return `${date} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-/** 行の右端に置く小さな日付「10.26」 */
+/** 行の右端に置く小さな日付「10/26」 */
 export function shortDate(d: Date): string {
-  const md = `${d.getMonth() + 1}.${d.getDate()}`
-  return d.getFullYear() === new Date().getFullYear() ? md : `${String(d.getFullYear()).slice(2)}.${md}`
+  const md = `${d.getMonth() + 1}/${d.getDate()}`
+  return d.getFullYear() === new Date().getFullYear() ? md : `${d.getFullYear()}/${md}`
 }
 
 /** <input type="datetime-local"> 用の文字列 */

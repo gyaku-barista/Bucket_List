@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../firebase'
 import { Composition } from './Composition'
-import { LinkChoice } from './ui'
+import { Segmented } from './ui'
 
 const ERRORS: Record<string, string> = {
   'auth/invalid-credential': 'メールアドレスかパスワードが違います',
@@ -46,7 +46,8 @@ export function AuthScreen() {
 
   return (
     <Composition title="ふたりのやりたいこと" lead="ふたりでしたいこと、それぞれしたいことを、一枚の紙に書きためていく帳面です。">
-      <LinkChoice
+      <Segmented
+        label="ログインか新規登録か"
         options={[
           { value: 'login', label: 'ログイン' },
           { value: 'signup', label: 'はじめて使う' },
@@ -72,11 +73,11 @@ export function AuthScreen() {
         </label>
         {message && <p className="note">{message}</p>}
         <div className="form-actions">
-          <button className="link strong" disabled={busy}>
+          <button className="btn primary" disabled={busy}>
             {mode === 'login' ? 'ひらく' : '登録する'}
           </button>
           {mode === 'login' && (
-            <button type="button" className="link quiet" onClick={reset}>
+            <button type="button" className="btn ghost" onClick={reset}>
               パスワードを忘れた
             </button>
           )}

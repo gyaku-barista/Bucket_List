@@ -3,7 +3,7 @@ import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { createSpace, joinSpace } from '../data'
 import { Composition } from './Composition'
-import { LinkChoice } from './ui'
+import { Segmented } from './ui'
 
 export function SetupScreen({ uid }: { uid: string }) {
   const [displayName, setDisplayName] = useState('')
@@ -32,7 +32,8 @@ export function SetupScreen({ uid }: { uid: string }) {
           <span className="field-label">あなたの名前</span>
           <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={20} required />
         </label>
-        <LinkChoice
+        <Segmented
+          label="紙を用意するか参加するか"
           options={[
             { value: 'create', label: '新しく紙を用意する' },
             { value: 'join', label: '招待コードで参加する' },
@@ -57,10 +58,10 @@ export function SetupScreen({ uid }: { uid: string }) {
         )}
         {message && <p className="note">{message}</p>}
         <div className="form-actions">
-          <button className="link strong" disabled={busy}>
+          <button className="btn primary" disabled={busy}>
             {mode === 'create' ? '用意する' : '参加する'}
           </button>
-          <button type="button" className="link quiet" onClick={() => signOut(auth)}>
+          <button type="button" className="btn ghost" onClick={() => signOut(auth)}>
             ログアウト
           </button>
         </div>

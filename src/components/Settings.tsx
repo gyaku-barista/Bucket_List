@@ -73,16 +73,16 @@ export function Settings({ space, uid, members, items, onClose }: Props) {
             <Avatar member={me} size={56} />
             <label className="grow">
               <span className="field-label">名前</span>
-              <input className={'hand-input ' + inkOf(uid, space.members)} value={name} onChange={(e) => setName(e.target.value)} onBlur={saveName} maxLength={20} />
+              <input className={inkOf(uid, space.members)} value={name} onChange={(e) => setName(e.target.value)} onBlur={saveName} maxLength={20} />
             </label>
           </div>
           <div className="form-actions">
-            <label className="link">
+            <label className="btn">
               写真を選ぶ
               <input type="file" accept="image/*" hidden onChange={(e) => changeAvatar(e.target.files?.[0])} />
             </label>
             {me?.avatar && (
-              <button className="link quiet" onClick={() => updateProfile(space.id, uid, { avatar: null })}>
+              <button className="btn ghost" onClick={() => updateProfile(space.id, uid, { avatar: null })}>
                 写真をはずす
               </button>
             )}
@@ -97,14 +97,14 @@ export function Settings({ space, uid, members, items, onClose }: Props) {
           {partner ? (
             <p className="profile">
               <Avatar member={partner} size={40} />
-              <span className={'hand ' + inkOf(partner.uid, space.members)}>{partner.displayName}</span>
+              <span className={'partner-name ' + inkOf(partner.uid, space.members)}>{partner.displayName}</span>
             </p>
           ) : (
             <>
               <p className="note">この招待コードを相手に送って、はじめの画面で書いてもらってください。</p>
               <p className="invite-code">{space.inviteCode}</p>
               <div className="form-actions">
-                <button className="link strong" onClick={share}>
+                <button className="btn primary" onClick={share}>
                   招待を送る
                 </button>
               </div>
@@ -117,14 +117,14 @@ export function Settings({ space, uid, members, items, onClose }: Props) {
           <ul className="category-list">
             {space.categories.map((c, i) => (
               <li key={c.id}>
-                <span className="grow hand">{c.name}</span>
-                <button className="link quiet" onClick={() => moveCategory(i, -1)} disabled={i === 0}>
+                <span className="grow">{c.name}</span>
+                <button className="btn ghost" onClick={() => moveCategory(i, -1)} disabled={i === 0}>
                   上へ
                 </button>
-                <button className="link quiet" onClick={() => moveCategory(i, 1)} disabled={i === space.categories.length - 1}>
+                <button className="btn ghost" onClick={() => moveCategory(i, 1)} disabled={i === space.categories.length - 1}>
                   下へ
                 </button>
-                <button className="link quiet" onClick={() => removeCategory(c.id)}>
+                <button className="btn ghost" onClick={() => removeCategory(c.id)}>
                   消す
                 </button>
               </li>
@@ -137,13 +137,13 @@ export function Settings({ space, uid, members, items, onClose }: Props) {
               addCategory()
             }}
           >
-            <input className="hand-input grow" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="新しい分類" maxLength={20} />
-            <button className="link">足す</button>
+            <input className="grow" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="新しい分類" maxLength={20} />
+            <button className="btn">足す</button>
           </form>
         </section>
 
         <div className="form-actions">
-          <button className="link quiet" onClick={() => signOut(auth)}>
+          <button className="btn ghost" onClick={() => signOut(auth)}>
             ログアウト
           </button>
         </div>

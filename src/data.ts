@@ -131,6 +131,11 @@ export async function saveCompletion(spaceId: string, item: Item, input: Complet
   await batch.commit()
 }
 
+/** 行の丸をタップしたとき。日時だけ記録し、写真やことばはあとから足せる */
+export async function markDone(spaceId: string, itemId: string) {
+  await updateDoc(doc(itemsCol(spaceId), itemId), { done: true, doneAt: Timestamp.now(), updatedAt: serverTimestamp() })
+}
+
 export async function undoCompletion(spaceId: string, itemId: string) {
   // 写真やメモは残しておき、もう一度達成にしたときに復元されるようにする
   await updateDoc(doc(itemsCol(spaceId), itemId), { done: false, updatedAt: serverTimestamp() })

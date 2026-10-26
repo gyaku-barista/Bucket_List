@@ -84,7 +84,7 @@ export function CompleteForm({ spaceId, item, onClose }: { spaceId: string; item
                 <span className="print-frame">
                   <img src={p.data} alt="" />
                 </span>
-                <button type="button" className="link quiet" onClick={() => setExisting((x) => x.filter((y) => y.id !== p.id))}>
+                <button type="button" className="btn ghost" onClick={() => setExisting((x) => x.filter((y) => y.id !== p.id))}>
                   はずす
                 </button>
               </div>
@@ -94,14 +94,14 @@ export function CompleteForm({ spaceId, item, onClose }: { spaceId: string; item
                 <span className="print-frame">
                   <img src={data} alt="" />
                 </span>
-                <button type="button" className="link quiet" onClick={() => setAdded((x) => x.filter((_, j) => j !== i))}>
+                <button type="button" className="btn ghost" onClick={() => setAdded((x) => x.filter((_, j) => j !== i))}>
                   はずす
                 </button>
               </div>
             ))}
           </div>
           {total < MAX_PHOTOS && (
-            <label className="link add-photo">
+            <label className="btn add-photo">
               {processing ? '写真を読み込んでいます…' : '写真を貼る'}
               <input type="file" accept="image/*" multiple hidden onChange={(e) => addFiles(e.target.files)} />
             </label>
@@ -110,11 +110,11 @@ export function CompleteForm({ spaceId, item, onClose }: { spaceId: string; item
 
         <label>
           <span className="field-label">思い出のことば</span>
-          <textarea className="hand-input ruled" rows={4} value={doneMemo} onChange={(e) => setDoneMemo(e.target.value)} maxLength={5000} />
+          <textarea rows={4} value={doneMemo} onChange={(e) => setDoneMemo(e.target.value)} maxLength={5000} />
         </label>
 
         <div className="form-actions">
-          <button className="link strong" disabled={busy || processing || !loaded}>
+          <button className="btn primary" disabled={busy || processing || !loaded}>
             これで残す
           </button>
         </div>

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { updateItem, type ItemInput } from '../data'
 import type { Category, Item, Member } from '../types'
-import { Dots, LinkChoice, Sheet } from './ui'
+import { Chips, Dots, Segmented, Sheet } from './ui'
 
 interface Props {
   spaceId: string
@@ -45,17 +45,17 @@ export function ItemForm({ spaceId, uid, members, categories, item, onClose }: P
       <form className="form" onSubmit={submit}>
         <label>
           <span className="field-label">やりたいこと</span>
-          <input className="hand-input" value={form.title} onChange={(e) => set('title', e.target.value)} maxLength={100} required />
+          <input value={form.title} onChange={(e) => set('title', e.target.value)} maxLength={100} required />
         </label>
 
         <div className="field">
           <span className="field-label">だれの</span>
-          <LinkChoice options={owners} value={form.owner} onChange={(v) => set('owner', v)} />
+          <Segmented label="だれの" options={owners} value={form.owner} onChange={(v) => set('owner', v)} />
         </div>
 
         <div className="field">
           <span className="field-label">分類</span>
-          <LinkChoice options={categories.map((c) => ({ value: c.id, label: c.name }))} value={form.category} onChange={(v) => set('category', v)} />
+          <Chips options={categories.map((c) => ({ value: c.id, label: c.name }))} value={form.category} onChange={(v) => set('category', v)} />
         </div>
 
         <div className="field">
@@ -65,7 +65,7 @@ export function ItemForm({ spaceId, uid, members, categories, item, onClose }: P
 
         <label>
           <span className="field-label">場所</span>
-          <input className="hand-input" value={form.place} onChange={(e) => set('place', e.target.value)} maxLength={100} />
+          <input value={form.place} onChange={(e) => set('place', e.target.value)} maxLength={100} />
         </label>
         <label>
           <span className="field-label">リンク</span>
@@ -73,11 +73,11 @@ export function ItemForm({ spaceId, uid, members, categories, item, onClose }: P
         </label>
         <label>
           <span className="field-label">メモ</span>
-          <textarea className="hand-input" rows={3} value={form.memo} onChange={(e) => set('memo', e.target.value)} maxLength={2000} />
+          <textarea rows={3} value={form.memo} onChange={(e) => set('memo', e.target.value)} maxLength={2000} />
         </label>
 
         <div className="form-actions">
-          <button className="link strong">これで書く</button>
+          <button className="btn primary">これで書く</button>
         </div>
       </form>
     </Sheet>

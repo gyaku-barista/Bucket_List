@@ -128,22 +128,22 @@ export function ItemDetail({ spaceId, item, members, memberOrder, categories, on
         <div className="form-actions">
           {item.done ? (
             <>
-              <button className="link strong" onClick={onComplete}>
+              <button className="btn primary" onClick={onComplete}>
                 思い出を書き足す
               </button>
-              <button className="link" onClick={undo}>
+              <button className="btn" onClick={undo}>
                 線を消す
               </button>
             </>
           ) : (
-            <button className="link strong" onClick={onComplete}>
+            <button className="btn primary" onClick={onComplete}>
               かなえた
             </button>
           )}
-          <button className="link" onClick={onEdit}>
+          <button className="btn" onClick={onEdit}>
             書き直す
           </button>
-          <button className="link quiet" onClick={remove}>
+          <button className="btn danger" onClick={remove}>
             捨てる
           </button>
         </div>
@@ -154,7 +154,7 @@ export function ItemDetail({ spaceId, item, members, memberOrder, categories, on
           <img src={photos[viewing].data} alt="" />
           <div className="form-actions" onClick={(e) => e.stopPropagation()}>
             {photos.length > 1 && (
-              <button className="link" onClick={() => setViewing((viewing + photos.length - 1) % photos.length)}>
+              <button className="btn" onClick={() => setViewing((viewing + photos.length - 1) % photos.length)}>
                 まえ
               </button>
             )}
@@ -162,11 +162,11 @@ export function ItemDetail({ spaceId, item, members, memberOrder, categories, on
               {viewing + 1} / {photos.length}
             </span>
             {photos.length > 1 && (
-              <button className="link" onClick={() => setViewing((viewing + 1) % photos.length)}>
+              <button className="btn" onClick={() => setViewing((viewing + 1) % photos.length)}>
                 つぎ
               </button>
             )}
-            <button className="link quiet" onClick={() => setViewing(null)}>
+            <button className="btn ghost" onClick={() => setViewing(null)}>
               閉じる
             </button>
           </div>
