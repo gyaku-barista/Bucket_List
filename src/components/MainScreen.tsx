@@ -312,9 +312,9 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
                     onOpen={() => setSheet({ kind: 'detail', id: item.id })}
                   >
                     <span className="row-no">{i + 1}</span>
+                    {/* 分類は、番号の右で余白線をまたいで貼った短いテープ片で */}
+                    <span className="cat-tape" style={{ background: tape }} title={findCategory(space.categories, item.category).name} aria-hidden />
                     <span className={'row-text ' + ink}>
-                      {/* 分類は、書き出しの下に敷いた半透明のテープで */}
-                      <span className="cat-tape" style={{ background: tape }} title={findCategory(space.categories, item.category).name} aria-hidden />
                       {item.done ? (
                         <s className={fresh.isStruck(item) ? 'strike drawing' : 'strike'} style={{ ['--hl' as string]: tape }}>
                           {item.title}
