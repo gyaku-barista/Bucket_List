@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
+import { markOf } from '../categories'
 import { addItem, updateItem, type ItemInput } from '../data'
 import type { Category, Item, Member } from '../types'
-import { Sheet, Stars } from './ui'
+import { Pips, Sheet } from './ui'
 
 interface Props {
   spaceId: string
@@ -45,16 +46,16 @@ export function ItemForm({ spaceId, uid, members, categories, item, defaults, on
   }
 
   return (
-    <Sheet title={item ? '編集' : 'やりたいことを追加'} onClose={onClose}>
+    <Sheet kicker={item ? 'EDIT' : 'NEW FRAME'} title={item ? '内容を編集' : 'やりたいことを追加'} onClose={onClose}>
       <form className="form" onSubmit={submit}>
         <label>
-          やりたいこと
-          <input value={form.title} onChange={(e) => set('title', e.target.value)} maxLength={100} required autoFocus={!item} />
+          <span className="field-label">やりたいこと</span>
+          <input className="title-input" value={form.title} onChange={(e) => set('title', e.target.value)} maxLength={100} required autoFocus={!item} />
         </label>
 
         <fieldset>
-          <legend>だれの？</legend>
-          <div className="segmented">
+          <legend className="field-label">だれの</legend>
+          <div className="line-tabs">
             {owners.map((o) => (
               <button type="button" key={o.value} className={form.owner === o.value ? 'active' : ''} onClick={() => set('owner', o.value)}>
                 {o.label}
@@ -64,31 +65,32 @@ export function ItemForm({ spaceId, uid, members, categories, item, defaults, on
         </fieldset>
 
         <fieldset>
-          <legend>カテゴリ</legend>
-          <div className="chips wrap">
+          <legend className="field-label">カテゴリ</legend>
+          <div className="mark-grid">
             {categories.map((c) => (
-              <button type="button" key={c.id} className={'chip' + (form.category === c.id ? ' active' : '')} onClick={() => set('category', c.id)}>
-                {c.emoji} {c.name}
+              <button type="button" key={c.id} className={form.category === c.id ? 'active' : ''} onClick={() => set('category', c.id)}>
+                <span className="mark-glyph">{markOf(c)}</span>
+                <span className="mark-name">{c.name}</span>
               </button>
             ))}
           </div>
         </fieldset>
 
         <fieldset>
-          <legend>優先度</legend>
-          <Stars value={form.priority} max={3} onChange={(v) => set('priority', v || 1)} symbol="♥" />
+          <legend className="field-label">優先度</legend>
+          <Pips value={form.priority} max={3} onChange={(v) => set('priority', v || 1)} label="優先度" />
         </fieldset>
 
         <label>
-          場所
+          <span className="field-label">場所</span>
           <input value={form.place} onChange={(e) => set('place', e.target.value)} maxLength={100} />
         </label>
         <label>
-          URL
+          <span className="field-label">URL</span>
           <input type="url" inputMode="url" value={form.url} onChange={(e) => set('url', e.target.value)} placeholder="https://" />
         </label>
         <label>
-          メモ
+          <span className="field-label">メモ</span>
           <textarea rows={3} value={form.memo} onChange={(e) => set('memo', e.target.value)} maxLength={2000} />
         </label>
 

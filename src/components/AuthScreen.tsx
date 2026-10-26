@@ -1,10 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import {
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-  signInWithEmailAndPassword,
-} from 'firebase/auth'
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../firebase'
+import { Composition } from './Composition'
 
 const ERRORS: Record<string, string> = {
   'auth/invalid-credential': 'メールアドレスかパスワードが違います',
@@ -47,45 +44,41 @@ export function AuthScreen() {
   }
 
   return (
-    <div className="center-screen">
-      <div className="card auth-card">
-        <div className="logo">💞</div>
-        <h1>ふたりのバケットリスト</h1>
-        <div className="segmented">
-          <button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>
-            ログイン
-          </button>
-          <button className={mode === 'signup' ? 'active' : ''} onClick={() => setMode('signup')}>
-            新規登録
-          </button>
-        </div>
-        <form onSubmit={submit} className="form">
-          <label>
-            メールアドレス
-            <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </label>
-          <label>
-            パスワード
-            <input
-              type="password"
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </label>
-          {message && <p className="message">{message}</p>}
-          <button className="btn primary" disabled={busy}>
-            {mode === 'login' ? 'ログイン' : '登録する'}
-          </button>
-          {mode === 'login' && (
-            <button type="button" className="link-btn" onClick={reset}>
-              パスワードを忘れた
-            </button>
-          )}
-        </form>
+    <Composition vertical={['ふたりで、', 'やりたいこと。']}>
+      <div className="line-tabs">
+        <button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>
+          ログイン
+        </button>
+        <button className={mode === 'signup' ? 'active' : ''} onClick={() => setMode('signup')}>
+          新規登録
+        </button>
       </div>
-    </div>
+      <form onSubmit={submit} className="form">
+        <label>
+          <span className="field-label">メールアドレス</span>
+          <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </label>
+        <label>
+          <span className="field-label">パスワード</span>
+          <input
+            type="password"
+            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </label>
+        {message && <p className="message">{message}</p>}
+        <button className="btn primary" disabled={busy}>
+          {mode === 'login' ? 'ログイン' : '登録する'}
+        </button>
+        {mode === 'login' && (
+          <button type="button" className="link-btn" onClick={reset}>
+            パスワードを忘れた
+          </button>
+        )}
+      </form>
+    </Composition>
   )
 }

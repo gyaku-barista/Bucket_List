@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { deleteItem, fetchPhotos, undoCompletion } from '../data'
-import { findCategory } from '../categories'
+import { findCategory, markOf } from '../categories'
 import type { Category, Item, Member, Photo } from '../types'
-import { Avatar, formatDate, Sheet, Stars } from './ui'
+import { Avatar, formatDate, Pips, Sheet } from './ui'
 
 interface Props {
   spaceId: string
   item: Item
+  frameNo: number
   members: Member[]
   categories: Category[]
   onEdit: () => void
@@ -14,7 +15,7 @@ interface Props {
   onClose: () => void
 }
 
-export function ItemDetail({ spaceId, item, members, categories, onEdit, onComplete, onClose }: Props) {
+export function ItemDetail({ spaceId, item, frameNo, members, categories, onEdit, onComplete, onClose }: Props) {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [viewing, setViewing] = useState<number | null>(null)
   const category = findCategory(categories, item.category)
@@ -38,52 +39,69 @@ export function ItemDetail({ spaceId, item, members, categories, onEdit, onCompl
   }
 
   const undo = () => {
-    if (!confirm('未達成に戻しますか？（写真やメモは残ります）')) return
+    if (!confirm('「これから」に戻しますか？（写真やメモは残ります）')) return
     undoCompletion(spaceId, item.id).catch((err) => alert('更新に失敗しました: ' + err))
   }
 
   return (
-    <Sheet title={category.emoji + ' ' + category.name} onClose={onClose}>
+    <Sheet kicker={`No.${String(frameNo).padStart(2, '0')} — ${item.done ? 'DEVELOPED' : 'LATENT'}`} title={category.name} onClose={onClose}>
       <div className="detail">
-        <h3 className="detail-title">
-          {item.done && <span className="done-mark">✓ </span>}
-          {item.title}
-        </h3>
-        <div className="detail-meta">
-          <span className="owner-tag">{ownerLabel}</span>
-          <Stars value={item.priority} max={3} symbol="♥" />
-        </div>
-
-        {item.place && <p>📍 {item.place}</p>}
-        {item.url && (
-          <p className="ellipsis">
-            🔗{' '}
-            <a href={item.url} target="_blank" rel="noreferrer">
-              {item.url}
-            </a>
-          </p>
-        )}
-        {item.memo && <p className="pre">{item.memo}</p>}
-        <p className="sub">
-          <Avatar member={creator} size={16} /> {creator?.displayName} が {item.createdAt ? formatDate(item.createdAt.toDate()) : ''} に追加
+        <span className="detail-mark" aria-hidden>
+          {markOf(category)}
+        </span>
+        <h3 className="detail-title">{item.title}</h3>
+        <dl className="spec">
+          <div>
+            <dt>だれの</dt>
+            <dd>{ownerLabel}</dd>
+          </div>
+          <div>
+            <dt>優先度</dt>
+            <dd>
+              <Pips value={item.priority} max={3} label="優先度" />
+            </dd>
+          </div>
+          {item.place && (
+            <div>
+              <dt>場所</dt>
+              <dd>{item.place}</dd>
+            </div>
+          )}
+          {item.url && (
+            <div>
+              <dt>URL</dt>
+              <dd className="ellipsis">
+                <a href={item.url} target="_blank" rel="noreferrer">
+                  {item.url.replace(/^https?:\/\//, '')}
+                </a>
+              </dd>
+            </div>
+          )}
+        </dl>
+        {item.memo && <p className="pre memo">{item.memo}</p>}
+        <p className="byline">
+          <Avatar member={creator} size={18} />
+          {creator?.displayName} — {item.createdAt ? formatDate(item.createdAt.toDate()) : ''}
         </p>
 
         {item.done && (
           <section className="memory">
-            <h4>🎉 達成の記録</h4>
-            <p>{item.doneAt && formatDate(item.doneAt.toDate(), true)}</p>
-            {item.rating > 0 && <Stars value={item.rating} max={5} />}
+            <header>
+              <span className="kicker">DEVELOPED ON</span>
+              <time>{item.doneAt && formatDate(item.doneAt.toDate(), true)}</time>
+              {item.rating > 0 && <Pips value={item.rating} max={5} label="満足度" />}
+            </header>
             {photos.length > 0 && (
-              <div className="photo-grid">
+              <div className="contact">
                 {photos.map((p, i) => (
-                  <button type="button" className="photo-cell" key={p.id} onClick={() => setViewing(i)}>
+                  <button type="button" key={p.id} onClick={() => setViewing(i)} style={{ '--i': i } as CSSProperties}>
                     <img src={p.data} alt="" />
                   </button>
                 ))}
               </div>
             )}
-            {item.photoIds.length > 0 && photos.length === 0 && <p className="sub">写真を読み込み中…</p>}
-            {item.doneMemo && <p className="pre">{item.doneMemo}</p>}
+            {item.photoIds.length > 0 && photos.length === 0 && <p className="hint">現像中…</p>}
+            {item.doneMemo && <p className="pre hand">{item.doneMemo}</p>}
           </section>
         )}
 
@@ -94,39 +112,43 @@ export function ItemDetail({ spaceId, item, members, categories, onEdit, onCompl
                 思い出を編集
               </button>
               <button className="btn" onClick={undo}>
-                未達成に戻す
+                「これから」に戻す
               </button>
             </>
           ) : (
             <button className="btn primary" onClick={onComplete}>
-              達成した！
+              達成した
             </button>
           )}
-          <button className="btn" onClick={onEdit}>
-            内容を編集
-          </button>
-          <button className="btn danger" onClick={remove}>
-            削除
-          </button>
+          <div className="actions row">
+            <button className="btn" onClick={onEdit}>
+              内容を編集
+            </button>
+            <button className="btn danger" onClick={remove}>
+              削除
+            </button>
+          </div>
         </div>
       </div>
 
       {viewing !== null && (
         <div className="viewer" onClick={() => setViewing(null)}>
           <img src={photos[viewing].data} alt="" />
-          {photos.length > 1 && (
-            <div className="viewer-nav" onClick={(e) => e.stopPropagation()}>
-              <button className="icon-btn" onClick={() => setViewing((viewing + photos.length - 1) % photos.length)}>
-                ‹
+          <div className="viewer-nav" onClick={(e) => e.stopPropagation()}>
+            {photos.length > 1 && (
+              <button onClick={() => setViewing((viewing + photos.length - 1) % photos.length)} aria-label="前へ">
+                ←
               </button>
-              <span>
-                {viewing + 1} / {photos.length}
-              </span>
-              <button className="icon-btn" onClick={() => setViewing((viewing + 1) % photos.length)}>
-                ›
+            )}
+            <span>
+              {String(viewing + 1).padStart(2, '0')} / {String(photos.length).padStart(2, '0')}
+            </span>
+            {photos.length > 1 && (
+              <button onClick={() => setViewing((viewing + 1) % photos.length)} aria-label="次へ">
+                →
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </Sheet>

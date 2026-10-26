@@ -1,5 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#e8677f"/>
-  <path d="M256 396c-8 0-15-3-21-8C171 333 112 284 112 214c0-45 34-80 78-80 27 0 50 13 66 34 16-21 39-34 66-34 44 0 78 35 78 80 0 70-59 119-123 174-6 5-13 8-21 8z" fill="#fff"/>
-  <path d="M206 236l34 34 68-68" fill="none" stroke="#e8677f" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <defs>
+    <radialGradient id="glow" cx="0.85" cy="0.1" r="0.8">
+      <stop offset="0" stop-color="#ff4b2b" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#0d0b0a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="#0d0b0a"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+  <g transform="rotate(-7 256 256)">
+    <rect x="128" y="112" width="256" height="300" fill="#ede4d3"/>
+    <rect x="148" y="132" width="216" height="216" fill="#15110f"/>
+    <circle cx="256" cy="240" r="58" fill="#ff4b2b"/>
+  </g>
 </svg>

@@ -3,7 +3,10 @@ import type { Timestamp } from 'firebase/firestore'
 export interface Category {
   id: string
   name: string
-  emoji: string
+  /** 表示用の一文字（未設定なら名前の一文字目） */
+  mark?: string
+  /** 旧バージョンの絵文字。表示には使わない */
+  emoji?: string
 }
 
 export interface Space {

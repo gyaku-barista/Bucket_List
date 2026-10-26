@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
+import { markOf } from '../categories'
 import { updateCategories, updateProfile } from '../data'
 import { squareThumb } from '../image'
 import type { Item, Member, Space } from '../types'
@@ -18,7 +19,6 @@ export function Settings({ space, uid, members, items, onClose }: Props) {
   const me = members.find((m) => m.uid === uid)
   const partner = members.find((m) => m.uid !== uid)
   const [name, setName] = useState(me?.displayName ?? '')
-  const [newEmoji, setNewEmoji] = useState('')
   const [newCategory, setNewCategory] = useState('')
 
   const saveName = () => {
@@ -38,9 +38,8 @@ export function Settings({ space, uid, members, items, onClose }: Props) {
   const addCategory = () => {
     const n = newCategory.trim()
     if (!n) return
-    updateCategories(space.id, [...space.categories, { id: 'c' + Date.now().toString(36), name: n, emoji: newEmoji.trim() || '🏷️' }])
+    updateCategories(space.id, [...space.categories, { id: 'c' + Date.now().toString(36), name: n, mark: Array.from(n)[0] }])
     setNewCategory('')
-    setNewEmoji('')
   }
 
   const removeCategory = (id: string) => {
@@ -58,7 +57,7 @@ export function Settings({ space, uid, members, items, onClose }: Props) {
   }
 
   const share = async () => {
-    const text = `ふたりのバケットリストに招待します！\n招待コード: ${space.inviteCode}\n${location.href}`
+    const text = `ふたりのバケットリストに招待します。\n招待コード: ${space.inviteCode}\n${location.href}`
     if (navigator.share) await navigator.share({ text }).catch(() => {})
     else {
       await navigator.clipboard.writeText(text)
@@ -67,18 +66,20 @@ export function Settings({ space, uid, members, items, onClose }: Props) {
   }
 
   return (
-    <Sheet title="設定" onClose={onClose}>
-      <div className="form">
-        <section className="settings-section">
-          <h3>プロフィール</h3>
+    <Sheet kicker="SETTINGS" title="設定" onClose={onClose}>
+      <div className="settings">
+        <section>
+          <h3>
+            <span>01</span>プロフィール
+          </h3>
           <div className="profile-row">
             <label className="avatar-edit">
-              <Avatar member={me} size={72} />
-              <span>変更</span>
+              <Avatar member={me} size={76} />
+              <span>写真を変更</span>
               <input type="file" accept="image/*" hidden onChange={(e) => changeAvatar(e.target.files?.[0])} />
             </label>
             <label className="grow">
-              表示名
+              <span className="field-label">表示名</span>
               <input value={name} onChange={(e) => setName(e.target.value)} onBlur={saveName} maxLength={20} />
             </label>
           </div>
@@ -89,16 +90,18 @@ export function Settings({ space, uid, members, items, onClose }: Props) {
           )}
         </section>
 
-        <section className="settings-section">
-          <h3>パートナー</h3>
+        <section>
+          <h3>
+            <span>02</span>パートナー
+          </h3>
           {partner ? (
             <div className="profile-row">
-              <Avatar member={partner} size={40} />
-              <span>{partner.displayName}</span>
+              <Avatar member={partner} size={44} />
+              <span className="partner-name">{partner.displayName}</span>
             </div>
           ) : (
             <>
-              <p className="hint">相手にこの招待コードを送って、アプリで入力してもらってください。</p>
+              <p className="hint">相手にこの招待コードを送り、アプリで入力してもらってください。</p>
               <div className="invite-code">{space.inviteCode}</div>
               <button className="btn" onClick={share}>
                 招待を送る
@@ -107,33 +110,34 @@ export function Settings({ space, uid, members, items, onClose }: Props) {
           )}
         </section>
 
-        <section className="settings-section">
-          <h3>カテゴリ</h3>
+        <section>
+          <h3>
+            <span>03</span>カテゴリ
+          </h3>
           <ul className="category-list">
             {space.categories.map((c, i) => (
               <li key={c.id}>
-                <span className="grow">
-                  {c.emoji} {c.name}
-                </span>
-                <button className="icon-btn small" onClick={() => moveCategory(i, -1)} aria-label="上へ">
+                <span className="mark-glyph">{markOf(c)}</span>
+                <span className="grow">{c.name}</span>
+                <button className="mini-btn" onClick={() => moveCategory(i, -1)} aria-label="上へ">
                   ↑
                 </button>
-                <button className="icon-btn small" onClick={() => moveCategory(i, 1)} aria-label="下へ">
+                <button className="mini-btn" onClick={() => moveCategory(i, 1)} aria-label="下へ">
                   ↓
                 </button>
-                <button className="icon-btn small" onClick={() => removeCategory(c.id)} aria-label="削除">
-                  🗑
+                <button className="mini-btn danger" onClick={() => removeCategory(c.id)}>
+                  削除
                 </button>
               </li>
             ))}
           </ul>
           <div className="add-category">
-            <input className="emoji-input" value={newEmoji} onChange={(e) => setNewEmoji(e.target.value)} placeholder="🏷️" maxLength={4} />
             <input className="grow" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="新しいカテゴリ" maxLength={20} />
             <button className="btn" onClick={addCategory}>
               追加
             </button>
           </div>
+          <p className="hint">名前の一文字目が、カテゴリの印になります。</p>
         </section>
 
         <button className="btn" onClick={() => signOut(auth)}>

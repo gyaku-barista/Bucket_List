@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { fetchPhotos, saveCompletion } from '../data'
 import { compressImage, squareThumb } from '../image'
 import type { Item, Photo } from '../types'
-import { Sheet, Stars, toLocalInput } from './ui'
+import { Pips, Sheet, toLocalInput } from './ui'
 
 const MAX_PHOTOS = 10
 
@@ -61,29 +61,29 @@ export function CompleteForm({ spaceId, item, onClose }: { spaceId: string; item
   }
 
   return (
-    <Sheet title={item.done ? '思い出を編集' : '達成！🎉'} onClose={onClose}>
+    <Sheet kicker="DEVELOP" title={item.done ? '思い出を編集' : '達成を記録'} onClose={onClose}>
       <form className="form" onSubmit={submit}>
         <p className="complete-title">{item.title}</p>
         <label>
-          達成した日時
+          <span className="field-label">達成した日時</span>
           <input type="datetime-local" value={doneAt} onChange={(e) => setDoneAt(e.target.value)} required />
         </label>
 
         <fieldset>
-          <legend>満足度</legend>
-          <Stars value={rating} max={5} onChange={setRating} />
+          <legend className="field-label">満足度</legend>
+          <Pips value={rating} max={5} onChange={setRating} label="満足度" />
         </fieldset>
 
         <fieldset>
-          <legend>
-            写真（{total}/{MAX_PHOTOS}）
+          <legend className="field-label">
+            写真 {total}/{MAX_PHOTOS}
           </legend>
           <div className="photo-grid">
             {existing.map((p) => (
               <div className="photo-cell" key={p.id}>
                 <img src={p.data} alt="" />
                 <button type="button" className="photo-remove" onClick={() => setExisting((x) => x.filter((y) => y.id !== p.id))} aria-label="削除">
-                  ✕
+                  ×
                 </button>
               </div>
             ))}
@@ -91,7 +91,7 @@ export function CompleteForm({ spaceId, item, onClose }: { spaceId: string; item
               <div className="photo-cell" key={'new' + i}>
                 <img src={data} alt="" />
                 <button type="button" className="photo-remove" onClick={() => setAdded((x) => x.filter((_, j) => j !== i))} aria-label="削除">
-                  ✕
+                  ×
                 </button>
               </div>
             ))}
@@ -105,8 +105,8 @@ export function CompleteForm({ spaceId, item, onClose }: { spaceId: string; item
         </fieldset>
 
         <label>
-          メモ・感想
-          <textarea rows={4} value={doneMemo} onChange={(e) => setDoneMemo(e.target.value)} maxLength={5000} />
+          <span className="field-label">メモ・感想</span>
+          <textarea className="hand" rows={4} value={doneMemo} onChange={(e) => setDoneMemo(e.target.value)} maxLength={5000} />
         </label>
 
         <button className="btn primary" disabled={busy || processing || !loaded}>
