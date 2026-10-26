@@ -246,7 +246,7 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
     <main className={'app on-' + tab}>
       <header className="top">
         <div className="top-row">
-          <h1 className="headline">{tab === 'list' ? 'バケットリスト' : tab === 'memories' ? '思い出' : '設定'}</h1>
+          {tab === 'list' ? <h1 className="headline latin">Bucket List</h1> : <h1 className="headline">{tab === 'memories' ? '思い出' : '設定'}</h1>}
           {tab === 'list' && (
             <div className="top-actions">
               <button

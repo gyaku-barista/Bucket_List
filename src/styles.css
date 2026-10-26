@@ -27,6 +27,8 @@
   --ink-b: #9a5b3f;
 
   --mincho: 'Shippori Mincho', 'Hiragino Mincho ProN', serif;
+  /* 欧文の見出し。やわらかい筆致のイタリックで、手書きと明朝の間に置く */
+  --latin: 'Fraunces', 'Shippori Mincho', Georgia, serif;
   --hand: 'Klee One', 'Hiragino Maru Gothic ProN', serif;
   --ui: 'Zen Kaku Gothic New', 'Hiragino Sans', sans-serif;
 
@@ -461,6 +463,20 @@ textarea:focus-visible {
   font-size: 28px;
   line-height: 1.35;
   letter-spacing: 0.02em;
+}
+
+.headline.latin {
+  font-family: var(--latin);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 34px;
+  line-height: 1.2;
+  letter-spacing: 0.005em;
+  /* SOFT で角を丸め、WONK で手書きに近い揺らぎを出す */
+  font-variation-settings:
+    'SOFT' 100,
+    'WONK' 1,
+    'opsz' 72;
 }
 
 .top-actions {
