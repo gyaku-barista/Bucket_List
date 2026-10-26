@@ -5,15 +5,22 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   // 相対パスにしておくと GitHub Pages のサブパスでもそのまま動く
   base: './',
-  build: { chunkSizeWarningLimit: 1200 },
+  build: { chunkSizeWarningLimit: 3500 },
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       workbox: {
-        // Google Fonts をオフラインでも使えるようにキャッシュする
+        // HEIF 変換の部品は大きいので、最初にまとめては取り込まず、使ったときにだけ保存する
+        globIgnores: ['**/heic-to-*.js'],
         runtimeCaching: [
+          {
+            urlPattern: /\/assets\/heic-to-.*\.js$/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'heic-decoder', expiration: { maxEntries: 2 } },
+          },
+          // Google Fonts をオフラインでも使えるようにキャッシュする
           {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/,
             handler: 'CacheFirst',
