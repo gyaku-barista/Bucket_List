@@ -9,7 +9,7 @@ import { ItemForm } from './ItemForm'
 import { Settings } from './Settings'
 import { CoupleArt } from './illustrations'
 import { Memories } from './Memories'
-import { Avatar, Chips, Icon, inkOf, Segmented, Sheet as SheetFrame, shortDate, wash } from './ui'
+import { Avatar, Chips, Icon, inkOf, Segmented, Sheet as SheetFrame, wash } from './ui'
 
 type Tab = 'list' | 'memories' | 'settings'
 type OwnerTab = 'both' | 'partner' | 'me' | 'all'
@@ -312,9 +312,9 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
                     onOpen={() => setSheet({ kind: 'detail', id: item.id })}
                   >
                     <span className="row-no">{i + 1}</span>
-                    {/* 分類は、行頭に貼った半透明のテープで */}
-                    <span className="cat-tape" style={{ background: tape }} title={findCategory(space.categories, item.category).name} aria-hidden />
                     <span className={'row-text ' + ink}>
+                      {/* 分類は、書き出しの下に敷いた半透明のテープで */}
+                      <span className="cat-tape" style={{ background: tape }} title={findCategory(space.categories, item.category).name} aria-hidden />
                       {item.done ? (
                         <s className={fresh.isStruck(item) ? 'strike drawing' : 'strike'} style={{ ['--hl' as string]: tape }}>
                           {item.title}
@@ -323,17 +323,9 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
                         item.title
                       )}
                     </span>
-                    {/* 並びは固定：日付 → 書いた人。かなえた行は日付の位置に達成日 */}
+                    {/* 右端は書いた人だけ。日付は詳細シートに */}
                     <span className="row-side">
-                      {item.done ? (
-                        // 「10/26 かなえた」は横に並べると項目名を押し出すので、日付の位置で2段にする
-                        <span className="row-date stacked">
-                          {item.doneAt && <span>{shortDate(item.doneAt.toDate())}</span>}
-                          <span>かなえた</span>
-                        </span>
-                      ) : (
-                        <span className="row-date">{item.createdAt && shortDate(item.createdAt.toDate())}</span>
-                      )}
+                      {item.done && <span className="row-done">かなえた</span>}
                       <Avatar member={members.find((m) => m.uid === item.createdBy)} ink={ink} size={22} />
                     </span>
                   </Line>

@@ -178,12 +178,6 @@ export function formatDate(d: Date, withTime = false): string {
   return `${date} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-/** 行の右端に置く小さな日付「10/26」 */
-export function shortDate(d: Date): string {
-  const md = `${d.getMonth() + 1}/${d.getDate()}`
-  return d.getFullYear() === new Date().getFullYear() ? md : `${d.getFullYear()}/${md}`
-}
-
 /** <input type="datetime-local"> 用の文字列 */
 export function toLocalInput(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0')
