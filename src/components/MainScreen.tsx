@@ -505,7 +505,6 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
       {sheet?.kind === 'edit' && sheetItem && (
         <ItemForm
           spaceId={spaceId}
-          members={members}
           categories={space.categories}
           item={sheetItem}
           onClose={() => setSheet({ kind: 'detail', id: sheetItem.id })}

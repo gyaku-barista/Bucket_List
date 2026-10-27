@@ -1,18 +1,17 @@
 import { useState, type FormEvent } from 'react'
 import { updateItem, type ItemInput } from '../data'
-import type { Category, Item, Member } from '../types'
+import type { Category, Item } from '../types'
 import { Chips, Dots, Segmented, Sheet } from './ui'
 
 interface Props {
   spaceId: string
-  members: Member[]
   categories: Category[]
   item: Item
   onClose: () => void
 }
 
 /** 書いた項目を書き直す（追加はリストの空いた行から） */
-export function ItemForm({ spaceId, members, categories, item, onClose }: Props) {
+export function ItemForm({ spaceId, categories, item, onClose }: Props) {
   const [form, setForm] = useState<ItemInput>({
     title: item.title,
     shared: item.shared ?? false,
@@ -23,8 +22,6 @@ export function ItemForm({ spaceId, members, categories, item, onClose }: Props)
     priority: item.priority,
   })
   const set = <K extends keyof ItemInput>(key: K, value: ItemInput[K]) => setForm((f) => ({ ...f, [key]: value }))
-
-  const writer = members.find((m) => m.uid === item.createdBy)
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -42,11 +39,11 @@ export function ItemForm({ spaceId, members, categories, item, onClose }: Props)
         </label>
 
         <div className="field">
-          <span className="field-label">だれの</span>
+          <span className="field-label">ひとりで？ ふたりで？</span>
           <Segmented
-            label="だれの"
+            label="ひとりで？ ふたりで？"
             options={[
-              { value: 'self', label: writer?.displayName ?? 'じぶん' },
+              { value: 'self', label: 'ひとりで' },
               { value: 'shared', label: 'ふたりで' },
             ]}
             value={form.shared ? 'shared' : 'self'}
