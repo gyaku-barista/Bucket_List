@@ -12,7 +12,7 @@ import { Memories } from './Memories'
 import { Avatar, Chips, Icon, inkOf, Segmented, Sheet as SheetFrame, wash } from './ui'
 
 type Tab = 'list' | 'memories' | 'settings'
-/** 'both' はすべて、'partner' / 'me' はその人が書いた項目と「ふたりで」の項目 */
+/** 'both' は「ふたりで」の項目、'partner' / 'me' はその人が「ひとりで」書いた項目 */
 type OwnerTab = 'both' | 'partner' | 'me'
 type Sort = 'new' | 'priority'
 type Sheet = { kind: 'edit'; id: string } | { kind: 'detail'; id: string } | { kind: 'complete'; id: string } | { kind: 'filter' }
@@ -122,8 +122,8 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
   const [searching, setSearching] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [draft, setDraft] = useState('')
-  // 書くときの「じぶん / ふたりで」。初期値は「じぶん」
-  const [draftShared, setDraftShared] = useState(false)
+  // 書くときの「じぶん / ふたりで」。見ている切り替えに合わせる（最初は「ふたりで」の紙なので、ふたりで）
+  const [draftShared, setDraftShared] = useState(true)
   const [sheet, setSheet] = useState<Sheet | null>(null)
   const [picked, setPicked] = useState<Item | null>(null)
   const [toast, setToast] = useState<Toast | null>(null)
@@ -144,10 +144,10 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
 
   const byOwner = useMemo(() => {
     const all = items ?? []
-    if (ownerTab === 'both') return all
-    // その人が書いた項目と、「ふたりで」の項目
+    if (ownerTab === 'both') return all.filter((i) => i.shared)
+    // その人が「じぶん（ひとりで）」として書いた項目だけ
     const person = ownerTab === 'me' ? uid : partner?.uid
-    return all.filter((i) => i.shared || i.createdBy === person)
+    return all.filter((i) => !i.shared && i.createdBy === person)
   }, [items, ownerTab, uid, partner?.uid])
 
   // かなえた項目も移動させず、書いた順のまま同じ紙に並べる
@@ -275,7 +275,11 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
               { value: 'me', label: myName },
             ]}
             value={ownerTab}
-            onChange={setOwnerTab}
+            onChange={(v) => {
+              setOwnerTab(v)
+              // 書いた項目が、いま見ている紙にそのまま並ぶように
+              setDraftShared(v === 'both')
+            }}
           />
         )}
       </header>
