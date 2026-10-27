@@ -14,28 +14,15 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      // 通知を受け取るため、サービスワーカーは src/sw.ts に自分で書く
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
-      workbox: {
-        // HEIF 変換の部品は大きいので、最初にまとめては取り込まず、使ったときにだけ保存する
+      injectManifest: {
+        // HEIF 変換の部品は大きいので、最初にまとめては取り込まない（sw.ts で使ったときに保存する）
         globIgnores: ['**/heic-to-*.js'],
-        runtimeCaching: [
-          {
-            urlPattern: /\/assets\/heic-to-.*\.js$/,
-            handler: 'CacheFirst',
-            options: { cacheName: 'heic-decoder', expiration: { maxEntries: 2 } },
-          },
-          // Google Fonts をオフラインでも使えるようにキャッシュする
-          {
-            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts',
-              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
       },
       manifest: {
         name: 'ふたりのやりたいこと',

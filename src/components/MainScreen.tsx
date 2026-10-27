@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import { addItem, markDone } from '../data'
+import { enableNotifications } from '../notifications'
 import { findCategory, tapeOf } from '../categories'
 import { useSpace } from '../hooks'
 import type { Item } from '../types'
@@ -131,6 +132,11 @@ export function MainScreen({ uid, spaceId }: { uid: string; spaceId: string }) {
   const lastWrite = useRef<{ title: string; at: number } | null>(null)
   const draftInput = useRef<HTMLInputElement>(null)
   const fresh = useFreshIds(items)
+
+  // 通知を許可済みの端末では、開くたびに受け取り先を新しくしておく
+  useEffect(() => {
+    enableNotifications(spaceId, uid, false).catch(() => {})
+  }, [spaceId, uid])
 
   useEffect(() => {
     if (!toast) return

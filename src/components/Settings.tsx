@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { updateCategories, updateProfile } from '../data'
 import { imageErrorMessage, squareThumb } from '../image'
+import { disableNotifications, enableNotifications, notifyState, type NotifyState } from '../notifications'
 import type { Item, Member, Space } from '../types'
 import { Avatar, inkOf } from './ui'
 
@@ -19,6 +20,23 @@ export function Settings({ space, uid, members, items }: Props) {
   const partner = members.find((m) => m.uid !== uid)
   const [name, setName] = useState(me?.displayName ?? '')
   const [newCategory, setNewCategory] = useState('')
+  const [notify, setNotify] = useState<NotifyState | null>(null)
+  const [notifyBusy, setNotifyBusy] = useState(false)
+
+  useEffect(() => {
+    notifyState().then(setNotify)
+  }, [])
+
+  const toggleNotify = async (on: boolean) => {
+    setNotifyBusy(true)
+    try {
+      setNotify(on ? await enableNotifications(space.id, uid) : await disableNotifications(space.id, uid))
+    } catch (err) {
+      alert('通知の設定ができませんでした\n' + err)
+    } finally {
+      setNotifyBusy(false)
+    }
+  }
 
   const saveName = () => {
     const trimmed = name.trim()
@@ -110,6 +128,36 @@ export function Settings({ space, uid, members, items }: Props) {
           </>
         )}
       </section>
+
+      {notify && notify !== 'unavailable' && (
+        <section>
+          <h3 className="field-label">通知</h3>
+          {notify === 'on' && (
+            <>
+              <p className="note">この端末で通知を受け取っています。相手がやりたいことを書いたときと、かなえたときにお知らせします。</p>
+              <div className="form-actions">
+                <button className="btn ghost" onClick={() => toggleNotify(false)} disabled={notifyBusy}>
+                  通知を止める
+                </button>
+              </div>
+            </>
+          )}
+          {notify === 'off' && (
+            <>
+              <p className="note">相手がやりたいことを書いたときと、かなえたときに、この端末にお知らせします。</p>
+              <div className="form-actions">
+                <button className="btn primary" onClick={() => toggleNotify(true)} disabled={notifyBusy}>
+                  通知を受け取る
+                </button>
+              </div>
+            </>
+          )}
+          {notify === 'denied' && <p className="note">この端末の設定で、このアプリの通知が止められています。端末の設定アプリの「通知」から許可してください。</p>}
+          {notify === 'unsupported' && (
+            <p className="note">この開き方では通知を受け取れません。iPhone はホーム画面に追加したアプリから開くと、通知を受け取れるようになります。</p>
+          )}
+        </section>
+      )}
 
       <section>
         <h3 className="field-label">分類</h3>

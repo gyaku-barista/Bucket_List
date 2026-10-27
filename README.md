@@ -48,6 +48,17 @@ Android / iOS どちらもブラウザから「ホーム画面に追加」する
 
 1人目が「リストを作る」→ 表示された招待コードを相手に送り、2人目が「招待コードで参加」で入力すれば共有完了です。
 
+### 4. 通知（相手が書いたとき・かなえたとき）
+
+通知は Cloud Functions（`functions/`）から Firebase Cloud Messaging で送ります。最初に一度だけ次の準備が必要です。
+
+1. Firebase コンソールで **Blaze プラン**に切り替える（ふたりで使う程度なら無料枠に収まる）。予算アラートも設定しておく
+2. プロジェクトの設定 → **Cloud Messaging** → ウェブプッシュ証明書で「鍵ペアを生成」し、公開鍵を `src/notifications.ts` の `VAPID_KEY` に書く
+3. Google Cloud コンソールでサービスアカウントを作り、JSON 鍵を GitHub の Secrets に `FIREBASE_SERVICE_ACCOUNT` として登録する
+   （`main` に `functions/` の変更を push すると、`.github/workflows/functions.yml` が Cloud Functions を公開する。Actions タブから手動でも実行できる）
+
+各自、アプリの「設定」→「通知を受け取る」を押すと、その端末で通知を受け取れます（iPhone はホーム画面に追加したアプリから）。
+
 ## ローカル開発
 
 ```bash
